@@ -568,3 +568,114 @@ def test_cli_github_annotations_and_summary(tmp_path: Path):
     text = summary.read_text()
     assert "| warning | `description-trigger` | 1 |" in text, text
     assert "| `skills/widget-skill` | 0 | 1 |" in text, text
+
+
+# ---------------------------------------------------------------------------
+# File encoding (error)
+# ---------------------------------------------------------------------------
+
+
+def test_non_utf8_reference_is_a_finding_not_a_crash(tmp_path: Path):
+    """Rule file-encoding: a non-UTF-8 reference is reported; the run continues."""
+    skill_dir = _make_skill(
+        tmp_path,
+        body="# T\n\nSee [a](references/a.md) and [b](references/b.md).\n",
+        references={"b.md": "# B\n\nSee [c](c.md).\n"},
+    )
+    (skill_dir / "references" / "a.md").write_bytes(b"# A\n\ncaf\xe9\n")
+
+    result = _only_result(tmp_path)
+    encoding = [e for e in result.errors if e.rule == "file-encoding"]
+    assert len(encoding) == 1, (
+        f"file-encoding: expected one error, got {_rules(result.errors)}"
+    )
+    assert encoding[0].file.endswith("references/a.md"), (
+        f"file-encoding: wrong file {encoding[0].file}"
+    )
+    assert "broken-link" in _rules(result.errors), (
+        "file-encoding: the other references should still be checked"
+    )
+
+
+def test_utf8_reference_passes(tmp_path: Path):
+    """Rule file-encoding: non-ASCII UTF-8 text is fine."""
+    _make_skill(
+        tmp_path,
+        body="# T\n\nSee [a](references/a.md).\n",
+        references={"a.md": "# A\n\ncafé — naïve ✓\n"},
+    )
+    result = _only_result(tmp_path)
+    assert "file-encoding" not in _rules(result.errors), (
+        f"file-encoding: valid UTF-8 flagged: {result.errors}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Description cut short by a YAML comment (error)
+# ---------------------------------------------------------------------------
+
+
+def _write_raw_skill(tmp_path: Path, frontmatter_lines: str) -> None:
+    skill_dir = tmp_path / "skills" / "widget-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        f"---\nname: widget-skill\n{frontmatter_lines}---\n\n# T\n\nBody.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "frontmatter_lines",
+    [
+        "description: Use when asked to review PR #N or merge request.\n",
+        "description: Use when asked to review\n  a PR #N or merge request.\n",
+        "description: Use when reviewing.\n  # Also when asked to review a PR.\n",
+    ],
+    ids=["same-line", "continuation-line", "comment-line"],
+)
+def test_unquoted_description_with_hash_fails(tmp_path: Path, frontmatter_lines: str):
+    """Rule description-yaml-comment: ' #' in a plain scalar truncates it."""
+    _write_raw_skill(tmp_path, frontmatter_lines)
+    result = _only_result(tmp_path)
+    assert "description-yaml-comment" in _rules(result.errors), (
+        f"description-yaml-comment: truncation not flagged, got {_rules(result.errors)}"
+    )
+
+
+@pytest.mark.parametrize(
+    "frontmatter_lines",
+    [
+        'description: "Use when asked to review PR #N."\n',
+        "description: 'Use when asked to review PR #N.'\n",
+        "description: >-\n  Use when asked to review PR #N.\n",
+        "description: |\n  Use when asked to review PR #N.\n",
+        "description: Use when writing C# or F#.\n",
+        "description: Use when reviewing.  # trailing comment is intentional\n",
+    ],
+    ids=["double-quoted", "single-quoted", "folded", "literal", "no-space", "trailing"],
+)
+def test_description_hash_that_survives_passes(tmp_path: Path, frontmatter_lines: str):
+    """Rule description-yaml-comment: quoted, block, and 'C#'-style values pass."""
+    _write_raw_skill(tmp_path, frontmatter_lines)
+    result = _only_result(tmp_path)
+    flagged = "description-yaml-comment" in _rules(result.errors)
+    # A trailing '  # comment' is still a comment: YAML drops it, so it is
+    # flagged too. Every other case keeps '#' in the value.
+    if "trailing" in frontmatter_lines:
+        assert flagged, "description-yaml-comment: trailing comment not flagged"
+    else:
+        assert not flagged, (
+            f"description-yaml-comment: '{frontmatter_lines.strip()}' flagged"
+        )
+
+
+def test_agent_unquoted_description_with_hash_fails(tmp_path: Path):
+    """Rule description-yaml-comment applies to agent front matter too."""
+    agents_dir = tmp_path / "agents"
+    agents_dir.mkdir()
+    (agents_dir / "helper.md").write_text(
+        "---\nname: helper\ndescription: Reviews PR #N end to end.\n---\n\nYou help.\n"
+    )
+    (result,) = validate_agents(tmp_path)
+    assert "description-yaml-comment" in _rules(result.errors), (
+        f"description-yaml-comment: agent truncation not flagged, got {_rules(result.errors)}"
+    )

@@ -35,6 +35,8 @@ Severity = Literal["error", "warning"]
 RULE_BODY_LENGTH = "skill-body-length"
 RULE_BROKEN_LINK = "broken-link"
 RULE_WINDOWS_PATH = "windows-path"
+RULE_FILE_ENCODING = "file-encoding"
+RULE_DESCRIPTION_YAML_COMMENT = "description-yaml-comment"
 # Rule ids — warnings.
 RULE_REFERENCE_TOC = "reference-toc"
 RULE_NESTED_REFERENCE = "nested-reference"
@@ -412,6 +414,72 @@ def _check_reference_toc(file_rel: str, text: str) -> list[QualityIssue]:
     ]
 
 
+_FRONTMATTER_KEY = re.compile(r"^([A-Za-z0-9_-]+)\s*:(.*)$")
+# In a plain (unquoted) YAML scalar, '#' preceded by whitespace starts a
+# comment, and so does a continuation line that starts with '#'.
+_YAML_COMMENT = re.compile(r"(?:^|\s)#")
+
+
+def check_description_yaml_comment(text: str, file: str) -> list[QualityIssue]:
+    """Flag an unquoted ``description:`` that YAML silently cuts at ``' #'``.
+
+    The parsed value is already shortened by the time the model sees it and
+    still passes every length and trigger check, so this looks at the raw
+    front matter instead.
+
+    Args:
+        text: The whole file (front matter included).
+        file: Path reported on the finding.
+    """
+
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return []
+
+    for index in range(1, len(lines)):
+        line = lines[index]
+        if line.strip() == "---":
+            return []
+        key = _FRONTMATTER_KEY.match(line)
+        if key is None or key.group(1) != "description":
+            continue
+
+        value = key.group(2).strip()
+        # Quoted and block scalars keep '#' literally.
+        if value[:1] in {'"', "'", "|", ">"}:
+            return []
+
+        # A plain scalar continues on indented (or blank) lines until the next
+        # top-level key or the closing fence.
+        segments = [(index + 1, value)]
+        for number in range(index + 1, len(lines)):
+            follow = lines[number]
+            if follow.strip() == "---" or (follow and not follow[0].isspace()):
+                break
+            segments.append((number + 1, follow.strip()))
+
+        for number, segment in segments:
+            if _YAML_COMMENT.search(segment):
+                return [
+                    QualityIssue(
+                        file=file,
+                        line=number,
+                        rule=RULE_DESCRIPTION_YAML_COMMENT,
+                        severity="error",
+                        message=(
+                            "Unquoted description contains ' #', which YAML "
+                            "reads as the start of a comment, so everything "
+                            "after it is silently dropped — quote the value "
+                            "or use a folded block (description: >-) "
+                            f"{_cite('Writing effective descriptions')}"
+                        ),
+                    )
+                ]
+        return []
+
+    return []
+
+
 def check_description(description: object) -> list[QualityIssue]:
     """Warnings about a skill description's voice and trigger wording.
 
@@ -505,9 +573,25 @@ def check_skill_quality(skill_dir: Path, body: str) -> list[QualityIssue]:
     references_dir = skill_dir / "references"
     if references_dir.is_dir():
         for ref in sorted(references_dir.glob("*.md")):
-            if ref.is_file():
-                documents.append(
-                    (f"references/{ref.name}", ref.read_text(encoding="utf-8"), 0)
+            if not ref.is_file():
+                continue
+            file_rel = f"references/{ref.name}"
+            try:
+                documents.append((file_rel, ref.read_text(encoding="utf-8"), 0))
+            except UnicodeDecodeError as exc:
+                # Report instead of crashing the whole run; the other rules
+                # cannot inspect a file they cannot decode.
+                issues.append(
+                    QualityIssue(
+                        file=file_rel,
+                        line=None,
+                        rule=RULE_FILE_ENCODING,
+                        severity="error",
+                        message=(
+                            f"File is not valid UTF-8 ({exc.reason} at byte "
+                            f"{exc.start}) — re-save it as UTF-8"
+                        ),
+                    )
                 )
 
     for file_rel, text, line_offset in documents:

@@ -16,7 +16,11 @@ from awos_recruitment_mcp.models import (
     McpDefinition,
     SkillMetadata,
 )
-from awos_recruitment_mcp.validate.quality import check_description, check_skill_quality
+from awos_recruitment_mcp.validate.quality import (
+    check_description,
+    check_description_yaml_comment,
+    check_skill_quality,
+)
 
 # Top-level entries permitted inside a skill directory. Kept in lockstep with
 # what the /bundle/skills endpoint actually ships: SKILL.md (file) and the flat
@@ -274,7 +278,10 @@ def validate_skills(registry_path: Path) -> list[ValidationResult]:
         # become errors; style guidance becomes warnings (see quality.py).
         warnings: list[ValidationError] = []
         skill_root = str(entry.relative_to(registry_path))
-        issues = check_description(metadata.get("description"))
+        issues = check_description_yaml_comment(
+            skill_md.read_text(encoding="utf-8"), "SKILL.md"
+        )
+        issues += check_description(metadata.get("description"))
         if post.content.strip():
             issues += check_skill_quality(entry, post.content)
         for issue in issues:
@@ -455,6 +462,22 @@ def validate_agents(registry_path: Path) -> list[ValidationResult]:
                         message=err["msg"],
                     )
                 )
+
+        # The model only sees the parsed value, so a description YAML cut at
+        # ' #' passes it; check the raw front matter too.
+        for issue in check_description_yaml_comment(
+            md_file.read_text(encoding="utf-8"), relative_path
+        ):
+            errors.append(
+                ValidationError(
+                    file=relative_path,
+                    field="description",
+                    message=issue.message,
+                    severity=issue.severity,
+                    rule=issue.rule,
+                    line=issue.line,
+                )
+            )
 
         # Ensure the filename stem matches the metadata name.
         meta_name = metadata.get("name")
