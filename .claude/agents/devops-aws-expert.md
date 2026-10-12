@@ -7,7 +7,7 @@ description: >-
   AWS services. Use proactively when a task touches AWS, Terraform or container
   deployment. Not for application code.
 model: opus
-memory: project
+memory: local
 skills:
   - terraform-skill
 mcpServers:
@@ -70,14 +70,14 @@ Skip it for routine, well-known calls where a documentation check would not chan
 Your caller sees only your final message, so make it self-contained:
 
 - **Files created or modified**: each path with one line on what changed
-- **Commands run and results**: `terraform fmt`, `terraform validate`, `terraform plan`, `docker build` and anything else you ran, with pass/fail and the relevant output excerpt
+- **Commands run and results**: `terraform fmt`, `terraform validate`, `docker build` and anything else you ran, with pass/fail and the relevant output excerpt. Run `terraform plan` only when the delegation explicitly asks for it: in a subagent it uses the real backend credentials and takes the state lock
 - **Documentation consulted**: the AWS documentation pages that shaped the recommendation
 - **Assumptions made** and **open questions** that need the caller's decision
 - Code in fenced blocks with language tags (hcl, dockerfile, yaml, json, bash); for multi-file solutions, label each block with its intended path, and organize Terraform logically (variables, main resources, outputs)
 
 ## Agent Memory
 
-Update your agent memory as you discover infrastructure patterns, Terraform module structures, AWS service configurations, Docker patterns, naming conventions, and architectural decisions in the user's projects. This builds up institutional knowledge across conversations. Write concise notes about what you found and where. Check your memory before starting work.
+Update your agent memory as you discover infrastructure patterns, Terraform module structures, AWS service configurations, Docker patterns, naming conventions, and architectural decisions in the user's projects. This builds up institutional knowledge across conversations. Write concise notes about what you found and where. Check your memory before starting work. Your memory scope is `local`, kept out of the repository, because these notes can include account structure, CIDRs and backend configuration.
 
 Examples of what to record:
 - AWS account structure, regions, and service preferences the user employs
