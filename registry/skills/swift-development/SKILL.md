@@ -20,7 +20,7 @@ Applicable to all Swift targets: Apple platforms, server-side (Vapor, Hummingbir
 
 ## Code Style
 
-- **Short functions** — extract well-named helpers when a block needs a comment. The bundled SwiftLint config (`references/static-analysis.md`) sets the ceiling: `function_body_length` warns at 50 lines and errors at 100.
+- **Short functions** — aim for one responsibility and roughly 20 lines; extract well-named helpers when a block needs a comment. Where the reference SwiftLint config (`references/static-analysis.md`) is adopted, it enforces the hard ceiling (`function_body_length` warn 50 / error 100).
 - **Imports at the top** — group by module. No `@_exported` unless building a module facade.
 - **Access control** — default to `private` or `internal`. Use `public` only at module boundaries.
 

@@ -876,21 +876,35 @@ struct ProcessedResult: Sendable {
 
 ### `sending` Parameter Modifier (Swift 6)
 
-The `sending` keyword indicates that a value is being transferred into a different isolation domain. The caller gives up access to the value. This is what lets a non-`Sendable` value cross into an actor: the compiler checks that nothing on the caller's side touches it afterwards, so no concurrent access is possible.
+A non-`Sendable` value can cross into an actor *without* `sending`: Swift 6 region-based isolation ([SE-0414](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0414-region-based-isolation.md)) proves the caller no longer touches it and lets the call through. What `sending` changes is what the *callee* may do with the parameter ([SE-0430](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0430-transferring-parameters-and-results.md)). Without it, the parameter may still be shared with the caller, so the callee cannot forward it into another isolation domain. With it, the caller promises that nothing else references the value, so the callee may send it onward.
 
 ```swift
-// A class with mutable state is not Sendable — without `sending` it could
-// not be passed into an actor at all.
-final class WorkItem {
+final class WorkItem {               // not Sendable
     var data: [UInt8]
     init(data: [UInt8]) { self.data = data }
 }
+func process(_ item: WorkItem) {}
 
+// Without `sending` the parameter may still be shared with the caller,
+// so forwarding it into a Task is rejected:
+func schedule(_ item: WorkItem) {
+    Task { process(item) }   // error: passing closure as a 'sending' parameter risks causing data races
+}
+
+// `sending` is the caller's promise that nothing else references `item`,
+// so the callee may send it onward:
+func schedule(_ item: sending WorkItem) {
+    Task { process(item) }   // OK
+}
+```
+
+The compiler enforces the promise on the caller's side: any use of the value after passing it as `sending` is an error.
+
+```swift
 actor Worker {
     private var queue: [WorkItem] = []
 
     func accept(_ item: sending WorkItem) {
-        // Worker now owns `item` exclusively and may store it in its state
         queue.append(item)
     }
 }

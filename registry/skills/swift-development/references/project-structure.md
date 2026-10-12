@@ -574,7 +574,7 @@ Key differences:
 
 ### Docker images
 
-Replace `<version>` with the toolchain your `swift-tools-version` requires (for example `6.1`). Check the `swift` repository on Docker Hub for the current tag list before writing the file — not every OS variant is published for every release.
+Replace `<version>` with the toolchain your `swift-tools-version` requires (for example `6.1`), or with the installed toolchain's version (`swift --version`). Check the `swift` repository on Docker Hub for the current tag list before writing the file — not every OS variant is published for every release. Never leave `<version>` in the output; if it can't be determined, ask the user.
 
 ```dockerfile
 FROM swift:<version> AS builder

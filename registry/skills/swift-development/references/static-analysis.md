@@ -30,7 +30,7 @@ mint install realm/SwiftLint
 
 #### SPM Build Plugin (recommended for reproducibility)
 
-Version placeholders in this file (`<latest release>`) are deliberate: look up the current release on the tool's GitHub releases page before writing the manifest, then pin that value so every developer and CI run uses the same tool version.
+Version placeholders in this file (`<latest release>`) are deliberate. `from:` takes a concrete minimum version, so replace `<latest release>` with the tool's latest stable release tag (check the repository's releases page) before writing the manifest, then pin that value so every developer and CI run uses the same tool version. Never leave the placeholder in generated code; if the version can't be determined, ask the user.
 
 ```swift
 // Package.swift
