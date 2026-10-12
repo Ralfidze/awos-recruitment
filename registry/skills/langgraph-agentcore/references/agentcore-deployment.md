@@ -401,7 +401,7 @@ infrastructure/
 │   ├── policies/
 │   │   ├── agent-access.cedar    # Agent tool access policies
 │   │   ├── hitl-gates.cedar      # HITL gate approval policies
-│   │   └── firebreaks.cedar      # Firebreak control policies
+│   │   └── emergency-stop.cedar  # Emergency-stop policies
 │   └── tests/
 │       └── policy-tests.cedar    # Cedar policy test cases
 └── agents/
@@ -422,7 +422,7 @@ infrastructure/
 | Environment | Purpose | Model Access | Data |
 |------------|---------|-------------|------|
 | `dev` | Development, experimentation | All tiers | Synthetic data |
-| `staging` | Integration testing, shadow mode | All tiers | Anonymised production data |
+| `staging` | Integration testing, parallel comparison | All tiers | Anonymised production data |
 | `prod` | Production workloads | All tiers | Real data |
 
 ### CI/CD for Agents
@@ -448,7 +448,7 @@ stages:
 
   - staging-deploy:
       - deploy to staging
-      - run shadow mode comparison
+      - run parallel comparison against the human path
       - validate cost per invocation
 
   - production-deploy:

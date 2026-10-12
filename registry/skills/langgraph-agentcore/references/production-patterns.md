@@ -8,7 +8,7 @@
   the circuit breaker behind `get_model`, graceful degradation
 - [Idempotency](#idempotency) — workflow-, node- and write-level
 - [Testing Strategies](#testing-strategies) — node unit tests, the
-  interrupt/resume test, shadow mode, Cedar policy tests
+  interrupt/resume test, parallel-comparison testing, Cedar policy tests
 - [Semantic Caching](#semantic-caching) — and when not to cache
 - [Bedrock Guardrails Configuration](#bedrock-guardrails-configuration) —
   layered defence against prompt injection
@@ -262,15 +262,16 @@ def test_hitl_interrupt_resume():
     assert not app.get_state(config).next  # Should be complete
 ```
 
-### Shadow Mode Testing
+### Parallel-Comparison Testing
 
-Before going live, run agents in shadow mode:
+Before going live, run agents in parallel with the human path, comparing
+their output but not using it:
 
 1. Process inputs through both human and agent paths.
 2. Compare agent outputs against human ground truth.
 3. Measure: accuracy per field, confidence calibration (ECE),
    false positive rate for HITL routing, cost per invocation.
-4. Only promote to assisted mode after N validated shadow outcomes.
+4. Only promote to pre-fill-with-approval mode after N validated comparison outcomes.
 
 ### Cedar Policy Testing
 

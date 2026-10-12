@@ -453,7 +453,7 @@ See `references/agentcore-deployment.md` for AgentCore Policy setup.
 
 ## Cost-Aware Pipeline Design
 
-### Cheap Gates First
+### Cheap Checks First
 
 Structure pipelines so the cheapest checks run first:
 

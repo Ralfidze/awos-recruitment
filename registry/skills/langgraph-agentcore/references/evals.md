@@ -86,7 +86,7 @@ the installed package.
   checks availability" comment.
 - Carries over the rule that a high-stakes task must not silently degrade to a
   cheaper tier without explicit configuration.
-- Mentions ordering cheap gates before expensive ones.
+- Mentions ordering cheap checks before expensive ones.
 
 **Fails if** the routing function has a branch whose body is a TODO or a
 comment deferring the logic.
