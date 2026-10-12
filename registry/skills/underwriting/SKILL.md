@@ -26,8 +26,8 @@ Two scoping notes apply to everything below and in the reference files:
   names, sanctions lists and compliance roles to the carrier's jurisdiction.
 - **Numeric thresholds** (confidence cut-offs, cost targets, HITL rates,
   timeouts, ECE alerts) are illustrative starting defaults, not regulatory
-  requirements. Tune them per line of business via policy packs and treat
-  them as configuration, not constants, in any spec you write.
+  requirements. Tune them per line of business in the per-LoB policy settings
+  and treat them as configuration, not constants, in any spec you write.
 
 ## Submission-to-Bind Lifecycle
 
@@ -40,8 +40,8 @@ issuance. The stages are sequential with gates between them.
 Ingestion → Triage → Assessment → Quoting → Binding → Issuance
               │          │            │         │         │
               ▼          ▼            ▼         ▼         ▼
-         Classification  Wave 1     Manual    Manual    Manual
-         & routing     + Wave 2    UW review  confirm   issue
+         Classification  Pre-screen Manual    Manual    Manual
+         & routing     + detailed  UW review  confirm   issue
 ```
 
 1. **Ingestion** — Receive submission (email, portal, API), parse documents,
@@ -50,15 +50,15 @@ Ingestion → Triage → Assessment → Quoting → Binding → Issuance
 2. **Triage** — Classify submission type (new business, MTA/endorsement, claim,
    renewal, other). Route based on classification confidence.
 
-3. **Assessment** — Two-phase design (see "Cheap Gates First" below):
-   - **Wave 1 (Fast Gate)**: Quick, low-cost checks — broker validation,
+3. **Assessment** — Two-phase design (see "Cheap Checks First" below):
+   - **Pre-screening**: Quick, low-cost checks — broker validation,
      territory/product appetite, basic eligibility, licensing, clearance.
      Goal: decline non-quotable submissions before expensive processing.
-   - **Wave 2 (Deep Processing)**: Full extraction, enrichment, compliance,
-     gap analysis. Only reached by submissions that pass Wave 1.
+   - **Detailed processing**: Full extraction, enrichment, compliance,
+     gap analysis. Only reached by submissions that pass pre-screening.
 
 4. **Quoting** — Assemble underwriting decision package, compute confidence
-   and thoroughness scores, apply desk quote gate, present to underwriter.
+   and thoroughness scores, apply the quote-readiness gate, present to underwriter.
 
 5. **Binding** — Underwriter makes firm order decision, terms confirmed with
    broker, binding authority exercised.
@@ -66,7 +66,7 @@ Ingestion → Triage → Assessment → Quoting → Binding → Issuance
 6. **Issuance** — Policy documents generated, premium invoiced, regulatory
    filings completed.
 
-### Cheap Gates First
+### Cheap Checks First
 
 Structure pipelines to minimise cost-to-decline. Run inexpensive checks
 (API lookups, business rules) before costly ones (LLM extraction, external
@@ -76,8 +76,8 @@ enrichment, compliance screening). Illustrative target cost breakdown
 | Stage | Target Cost | Primary Cost Drivers |
 |-------|------------|---------------------|
 | Triage | < $0.05 | Fast-tier LLM classification |
-| Wave 1 | < $0.10 | API lookups, minimal LLM |
-| Wave 2 | $1-5 | LLM extraction, external APIs, sanctions |
+| Pre-screening | < $0.10 | API lookups, minimal LLM |
+| Detailed processing | $1-5 | LLM extraction, external APIs, sanctions |
 
 See `references/submission-lifecycle.md` for detailed stage specifications.
 
@@ -94,7 +94,7 @@ Case (top-level submission record)
 
 - **Case ID**: Unique, time-sortable identifier per submission.
 - **Stage**: Maps to pipeline phases. Each stage has an execution type
-  (agent, manual, or shadow).
+  (agent, manual, or parallel comparison).
 - **Step**: Granular processing within a stage (e.g., "extract core facts",
   "run sanctions screening"). Steps track individual agent node executions.
 - **Task**: Assignable work unit for HITL review or manual processing.
@@ -120,7 +120,7 @@ different extraction requirements and field criticality.
 
 Every extracted field has a criticality tier that determines its confidence
 threshold and HITL routing. The thresholds below are illustrative starting
-defaults; tune them per LoB via policy packs:
+defaults; tune them per LoB in the policy settings:
 
 | Criticality | Threshold | Examples | HITL Policy |
 |------------|-----------|----------|-------------|
@@ -135,7 +135,7 @@ exclusion/endorsement language, contract-critical dates, sanctions fuzzy matches
 ### Field Catalog Configuration
 
 Define field-level extraction and HITL policies as configuration (not code),
-grouped by LoB via policy packs:
+grouped by LoB in the per-LoB policy settings:
 
 ```yaml
 field_catalog:
@@ -214,8 +214,8 @@ Regulated underwriting requires multiple compliance checkpoints. These are
 Screen every extracted entity (insured company, key persons, beneficial
 owners, asset locations) through a cost-tiered three-gate escalation: a cheap
 exact-match watchlist check, then fuzzy/alias screening, then a **blocking**
-human compliance review. Re-screen in Wave 2 with full extracted data even if
-Wave 1 cleared, because Wave 1 ran on limited data. Gate-by-gate costs, human
+human compliance review. Re-screen in detailed processing with full extracted
+data even if pre-screening cleared, because it ran on limited data. Gate-by-gate costs, human
 actions, and the partial-coverage pattern for sanctioned assets are in the
 "Sanctions Screening — 3-Gate Escalation" section of
 `references/compliance-and-hitl.md`.
@@ -226,7 +226,7 @@ actions, and the partial-coverage pattern for sanctioned assets are in the
   this jurisdiction. Check via quote management system API.
 - **Clearance**: Verify no conflicting quotes exist for this insured from
   other brokers. Check via internal systems.
-- Re-run in Wave 2 with full entity data (Wave 1 used preliminary data).
+- Re-run in detailed processing with full entity data (pre-screening used preliminary data).
 
 ### Compliance Status Consolidation
 
@@ -266,7 +266,7 @@ decisions during a scheduled review window.
 ### HITL Gate Design Principles
 
 1. **Gates are policy-driven, not hardcoded.** Define gates in configuration
-   (policy packs), not in agent code. This allows per-LoB customisation.
+   (the per-LoB policy settings), not in agent code. This allows per-LoB customisation.
 2. **Authorization is deterministic.** Use a policy engine (e.g., Cedar) to
    control who can approve which gates. Keep authorization **outside** the
    LLM reasoning loop — agents cannot reason past policy gates.
@@ -298,21 +298,26 @@ Introduce automation gradually through five operating modes, managed
 | Mode | HITL Rate | Behaviour |
 |------|-----------|-----------|
 | **Manual** | 100% | Humans do all work. AI captures data for training. |
-| **Shadow** | 100% (comparison) | AI runs in parallel. Results compared but not used. |
-| **Assisted** | 15-30% | AI pre-fills. Human approves before any write. |
-| **Selective** | 5-15% | AI handles routine cases. Exceptions route to human. |
+| **Parallel comparison** | 100% (comparison) | AI runs in parallel. Results compared but not used. |
+| **Pre-fill with approval** | 15-30% | AI pre-fills. Human approves before any write. |
+| **Exceptions only** | 5-15% | AI handles routine cases. Exceptions route to human. |
 | **Automated** | < 5% | Full automation. Human involvement only for policy-gated exceptions. |
 
-### Transitions and Firebreaks
+The mode names are illustrative labels for this ladder, not product vocabulary.
+The underlying model is a per-decision supervision setting: each mode fixes
+which decisions a human must take, approve, or merely sample.
+
+### Transitions and Emergency Stops
 
 Moving a workflow up a mode needs admin approval, and the documented steps
-also need evidence (for example a configurable number of validated shadow
-outcomes before Shadow → Assisted). Every transition is recorded in an
-immutable audit ledger. Firebreak controls can force any workflow back to
-Manual at any time, and lifting a firebreak never auto-restores the previous
-mode. The per-transition requirements and
-the four firebreak levels are in the "Operating Mode Transitions" and
-"Firebreak Controls" sections of `references/compliance-and-hitl.md`.
+also need evidence (for example a configurable number of validated
+parallel-comparison outcomes before Parallel comparison → Pre-fill with
+approval). Every transition is recorded in an immutable audit ledger.
+Emergency-stop controls can force any workflow back to Manual at any time, and
+lifting an emergency stop never auto-restores the previous mode. The
+per-transition requirements and the four emergency-stop levels are in the
+"Operating Mode Transitions" and "Emergency Stop Controls" sections of
+`references/compliance-and-hitl.md`.
 
 ## Underwriting Decision Package
 
@@ -325,8 +330,8 @@ that synthesises all upstream outputs for the underwriter:
 4. **Coverage options & exclusions** — requested terms vs. standard exclusions
 5. **Scoring** — overall confidence, thoroughness (% of required fields populated),
    evidence quality (% of facts with source traceability)
-6. **Desk quote gate** — deterministic routing to one of:
-   - Ready for desk quote
+6. **Quote-readiness gate** — deterministic routing to one of:
+   - Ready to quote
    - Needs underwriter input
    - Needs compliance review
    - Request more information (critical gaps)
@@ -339,7 +344,7 @@ and confidence thresholds. Design systems to be **LoB-configurable**:
 - Field catalogs (which fields to extract) are per-LoB configuration.
 - Confidence thresholds are per-LoB (terrorism may be stricter than general liability).
 - Compliance requirements vary by jurisdiction and LoB.
-- Use "policy packs" — configuration bundles per LoB — rather than code changes.
+- Use per-LoB policy settings — admin-owned configuration, one set per LoB — rather than code changes.
 
 ### Common LoB Patterns
 
@@ -357,4 +362,4 @@ and confidence thresholds. Design systems to be **LoB-configurable**:
   with decision logic, event patterns, and cost targets
 - `references/compliance-and-hitl.md` — Sanctions screening escalation, HITL gate
   inventory, confidence calibration details, automation bias safeguards,
-  operating mode transitions, firebreak controls
+  operating mode transitions, emergency-stop controls

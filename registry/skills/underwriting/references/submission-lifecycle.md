@@ -3,13 +3,13 @@
 ## Contents
 - Stage 1: Email Ingestion (pipeline nodes, outputs, events)
 - Stage 2: Triage (classification, two-stage confidence, routing, HITL resolution)
-- Stage 3: Wave 1 — Fast Gate (sequential checks, gate decision)
-- Stage 4: Wave 2 — Deep Processing (extraction, enrichment, compliance, decision package)
+- Stage 3: Pre-screening (sequential checks, gate decision)
+- Stage 4: Detailed Processing (extraction, enrichment, compliance, decision package)
 - Event Catalog Pattern
 - Orchestration Pattern
 
 Confidence percentages, timeouts and cost targets in this file are
-illustrative starting defaults; tune them per LoB via policy packs.
+illustrative starting defaults; tune them per LoB in the policy settings.
 
 ## Stage 1: Email Ingestion
 
@@ -85,10 +85,10 @@ Capture: original AI decision, human decision, override rationale, review time.
 
 ---
 
-## Stage 3: Wave 1 — Fast Gate (Agent)
+## Stage 3: Pre-screening (Agent)
 
 **Purpose**: Minimise cost-to-decline. Fast, cheap checks before expensive
-deep processing.
+detailed processing.
 
 **Trigger**: Triage completed with `new_submission` classification.
 
@@ -119,20 +119,20 @@ deep processing.
    - Licensed + cleared → proceed. Not licensed → decline.
      Clearance conflict → HITL (clearance review).
 
-5. **Wave 1 Gate Decision**
-   - All passed → proceed to Wave 2.
+5. **Pre-screening Gate Decision**
+   - All passed → proceed to detailed processing.
    - Any hard fail → decline, emit rejection event.
    - Any HITL triggered → pause, wait, re-evaluate.
 
 **Cost target**: < $0.10 per submission.
-**Events**: `broker.validated`, `eligibility.checked`, `wave1.completed`.
+**Events**: `broker.validated`, `eligibility.checked`, `prescreening.completed`.
 
 ---
 
-## Stage 4: Wave 2 — Deep Processing (Agent)
+## Stage 4: Detailed Processing (Agent)
 
 **Purpose**: Full extraction, enrichment, compliance, and decision package
-preparation. Only reached by submissions that passed Wave 1.
+preparation. Only reached by submissions that passed pre-screening.
 
 ### A. Sequential Extraction (order matters)
 
@@ -177,7 +177,7 @@ preparation. Only reached by submissions that passed Wave 1.
    listed in SKILL.md).
 9. **Company Sanctions Check** — Same pattern for insured company entity.
 10. **Advanced Licensing & Clearance** — Re-run with full extracted data
-    (Wave 1 used preliminary data). Cache results to avoid duplicate API calls.
+    (pre-screening used preliminary data). Cache results to avoid duplicate API calls.
 
 ### D. Assembly & Decision Package
 

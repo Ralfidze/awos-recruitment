@@ -6,12 +6,12 @@
 - Confidence Calibration Details (Two-Stage Hybrid Estimation, ECE Monitoring)
 - Automation Bias Safeguards (Safeguards 1-5)
 - Operating Mode Transitions
-- Firebreak Controls
+- Emergency Stop Controls
 
 Regulator names, sanctions lists and compliance roles in this file assume the
 UK/Lloyd's market; substitute the equivalents for the carrier's jurisdiction.
-Numeric thresholds are illustrative starting defaults to tune per LoB via
-policy packs, unless a line says otherwise.
+Numeric thresholds are illustrative starting defaults to tune per LoB in the
+policy settings, unless a line says otherwise.
 
 ## Sanctions Screening — 3-Gate Escalation
 
@@ -101,13 +101,13 @@ permit(
   resource == Gate::"sanctions_review"
 );
 
-// Block all agent tool access when kill switch is active
+// Block all agent tool access when the level-4 emergency stop is active
 forbid(
   principal,
   action,
   resource
 ) when {
-  context.kill_switch_active == true
+  context.emergency_stop_active == true
 };
 
 // Agent can only invoke tools for cases in its assigned LoB
@@ -160,7 +160,7 @@ Rules evaluated in priority order:
 3. Medium Confidence is the default (anything not matching Low or High)
 
 The monetary, OCR-quality and accuracy cut-offs below are illustrative
-starting defaults; set them per LoB in the policy pack.
+starting defaults; set them per LoB in the policy settings.
 
 Low Confidence triggers (any one is sufficient):
 - Financial field above monetary threshold (e.g., > $1M coverage)
@@ -219,7 +219,7 @@ routing (default bands; tune per LoB):
 | 40-59% | Low | Senior reviewer queue |
 | < 40% | Very Low | Specialist review |
 
-Configuration is per-field-criticality and per-LoB via policy packs:
+Configuration is per-field-criticality and per-LoB in the policy settings:
 - `sample_count`: 3-10 (default 5)
 - `temperature`: 0.5-1.0 (default 0.7)
 - `model_tier`: Can use cheaper model for sampling
@@ -245,7 +245,7 @@ fires well before calibration drift becomes visible in override rates:
 **Recalibration triggers**:
 - Critical ECE → auto-tighten thresholds by 5 percentage points
 - Override rate > 20% → flag field for prompt review
-- High-confidence errors > 5% → automatic firebreak (field reverts to HITL)
+- High-confidence errors > 5% → automatic emergency stop (field reverts to HITL)
 
 ---
 
@@ -299,31 +299,32 @@ read the evidence for each task type:
 
 ## Operating Mode Transitions
 
-Operating modes (Manual → Shadow → Assisted → Selective → Automated, defined
-in SKILL.md) are set per workflow type. The documented transitions:
+Operating modes (Manual → Parallel comparison → Pre-fill with approval →
+Exceptions only → Automated, defined in SKILL.md) are set per workflow type.
+The documented transitions:
 
-- **Manual → Shadow**: Admin approval, agent deployed and tested.
-- **Shadow → Assisted**: N validated shadow outcomes (configurable, default 50)
-  showing AI/human agreement. Dual admin approval.
+- **Manual → Parallel comparison**: Admin approval, agent deployed and tested.
+- **Parallel comparison → Pre-fill with approval**: N validated comparison
+  outcomes (configurable, default 50) showing AI/human agreement. Dual admin approval.
 - Each transition is recorded in an immutable audit ledger.
-- Firebreak controls (below) can force any workflow back to Manual at any time.
+- Emergency-stop controls (below) can force any workflow back to Manual at any time.
 
 ---
 
-## Firebreak Controls
+## Emergency Stop Controls
 
-Emergency controls to halt or restrict automation:
+Four levels of emergency stop to halt or restrict automation:
 
 | Level | Name | Effect | Authorization |
 |-------|------|--------|---------------|
 | 1 | Continue Manually | Pause this case only | Any operator |
 | 2 | Pause Workflow Type | All cases of this type revert to manual | Admin or supervisor |
-| 3 | Shadow-Only | AI runs but does not write to downstream systems | Admin only |
-| 4 | Kill Switch | Complete halt of automated processing | Dual authorization (Admin AND Compliance) |
+| 3 | Comparison Only | AI runs but does not write to downstream systems | Admin only |
+| 4 | Full Stop | Complete halt of automated processing | Dual authorization (Admin AND Compliance) |
 
 Design principles:
-- Firebreaks override operating modes immediately for new cases.
-- In-flight cases under a firebreak revert to manual processing.
-- Deactivating a firebreak does NOT auto-restore previous mode — explicit
+- Emergency stops override operating modes immediately for new cases.
+- In-flight cases under an emergency stop revert to manual processing.
+- Deactivating an emergency stop does NOT auto-restore previous mode — explicit
   admin action required to re-enable automation.
-- All firebreak activations/deactivations are recorded in an immutable audit ledger.
+- All emergency-stop activations/deactivations are recorded in an immutable audit ledger.
