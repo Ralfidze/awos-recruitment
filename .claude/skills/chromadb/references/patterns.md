@@ -119,8 +119,11 @@ Read the effective values back with `collection.configuration["hnsw"]` — that
 is the authoritative answer for a given build, and the fastest way to confirm a
 setting was accepted.
 
-`num_threads` and `batch_size` are accepted by the type but are not part of the
-persisted configuration, so setting them has no durable effect.
+`num_threads` and `batch_size` are accepted by the type but never serialized —
+the server marks both `skip_serializing`, so they are missing from the read-back
+and from the stored configuration (the collection comes back with defaults after
+a reload), and nothing in the local index reads them. Setting them has no
+durable effect.
 
 ### Example: optimized for recall
 
@@ -162,9 +165,9 @@ accepts it without warning — `metadata={"hnsw:space": "cosine",
 same configuration as the `configuration` block above. Two reasons to prefer
 the new form in new code: the key names differ from what the configuration
 actually stores (`hnsw:M` → `max_neighbors`, `hnsw:construction_ef` →
-`ef_construction`), and unrecognised keys such as `hnsw:num_threads` are kept
-verbatim in `collection.metadata` while doing nothing, which reads as if they
-took effect.
+`ef_construction`), and keys such as `hnsw:num_threads` and `hnsw:batch_size`
+are mapped but then dropped like their `configuration` counterparts above — the
+metadata keeps them verbatim, which reads as if they took effect.
 
 ### Changing parameters after creation
 
