@@ -351,7 +351,7 @@ suspend fun processDiscount(orderId: String) {
 |---|---|---|
 | Programmer error (bug) | `require()` / `check()` / `error()` | `require(age >= 0)` |
 | Expected business outcome | Sealed class hierarchy | `LoginResult.InvalidCredentials` |
-| Recoverable failure, non-suspending code | `Result` / `runCatching` | `runCatching { Files.readString(path) }` |
+| Recoverable failure, non-suspending code | `try/catch` on a specific type; `Result` / `runCatching` only when chaining, with `recover` rethrowing what it doesn't handle | `catch (e: NoSuchFileException) { DEFAULT }` |
 | Recoverable failure, `suspend` code | `try/catch`, rethrow `CancellationException` first | see `coroutines.md` |
 | Unrecoverable failure | Exception (let it propagate) | `throw DatabaseConnectionException(...)` |
 
@@ -373,6 +373,6 @@ val settings = runCatching { Files.readString(settingsPath) }
     .getOrThrow()
 ```
 
-`runCatching` catches `Throwable`, including `CancellationException`, so inside `suspend` functions it silently breaks cancellation. There, use `try/catch` that rethrows `CancellationException` first (worked example in `coroutines.md`).
+`runCatching` catches `Throwable`, so it also catches `Error`s such as `OutOfMemoryError` and, inside `suspend` functions, `CancellationException` — there it silently breaks cancellation. Always `recover` only the specific types you handle and rethrow the rest, as above. In `suspend` code use `try/catch` that rethrows `CancellationException` first (worked example in `coroutines.md`).
 
 **Exceptions** — for truly unexpected failures that should propagate.

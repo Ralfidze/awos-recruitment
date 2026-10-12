@@ -27,7 +27,7 @@ Modern Kotlin best practices for writing concise, safe, and idiomatic code. Targ
 
 ## Code Style
 
-- **Short functions** — keep each function readable without scrolling. If a block needs a comment to explain it, extract it into a well-named function. The Detekt config in `references/static-analysis.md` enforces `LongMethod` at 60 lines as the hard ceiling; aim well below it.
+- **Short functions** — aim for one responsibility and ~20 lines. If a block needs a comment to explain it, extract it into a well-named function. The ~20 is a target, not the lint limit: the Detekt config in `references/static-analysis.md` fails `LongMethod` at 60 lines.
 - **Imports at the top** — never use inline fully-qualified types (`java.time.LocalDateTime`) in the code body. Use import aliases for naming conflicts. No wildcard imports.
 
 ## Naming Conventions
@@ -122,8 +122,12 @@ open class AppException(message: String, cause: Throwable? = null) : RuntimeExce
 class ValidationException(message: String) : AppException(message)
 class NotFoundException(message: String) : AppException(message)
 
-// runCatching — non-suspending code only (see the coroutines rule below)
-val port = runCatching { config.getValue("port").toInt() }.getOrDefault(8080)
+// Recoverable failure — try/catch on the narrowest type you can handle
+val port = try {
+    config.getValue("port").toInt()
+} catch (e: NumberFormatException) {
+    8080
+}
 
 // Sealed result for expected business outcomes
 sealed interface FetchResult {
@@ -137,7 +141,7 @@ Rules:
 - Use `require()` for argument validation, `check()` for state validation.
 - Catch the narrowest exception that you can handle. Don't catch `Throwable` unless re-throwing — it hides `OutOfMemoryError` and cancellation.
 - Prefer sealed hierarchies over exceptions for expected outcomes.
-- In `suspend` functions use `try/catch` and rethrow `CancellationException` first; `runCatching` catches `Throwable`, so it swallows cancellation too. Keep it for non-suspending code.
+- `runCatching` catches `Throwable`, so it swallows `Error`s (`OutOfMemoryError`) and `CancellationException` alike. Use it only in non-suspending code when you want `Result` chaining, and `recover` only the types you handle, rethrowing the rest. In `suspend` functions use `try/catch` and rethrow `CancellationException` first.
 - See `references/patterns.md` for the full error handling decision guide.
 
 ## Coroutines Essentials
