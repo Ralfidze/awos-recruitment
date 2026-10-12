@@ -48,7 +48,15 @@ Independently of `status`, if the JSON carries **`check_stale: true`**, a recurr
 
 ## Recurring mode
 
-Run step 1 of "One pass" to resolve the repo, then invoke the `loop` skill with **this body verbatim** — substituting only the interval (`config.poll_interval_minutes` minutes, or the one given in the input):
+The `allowed-tools` grant on this skill lasts only for the turn that invoked it. A `/loop` tick is a later turn that never loads this file, so its scanner call prompts for permission — and a tick that stalls on a prompt is a check that silently stopped. Before arming, check `.claude/settings.local.json` for this rule under `permissions.allow`, written with the real absolute path exactly as below (settings don't substitute `${CLAUDE_SKILL_DIR}`):
+
+```json
+{"permissions": {"allow": ["Bash(${CLAUDE_SKILL_DIR}/scripts/scan.sh *)"]}}
+```
+
+If it is missing, say so in one line and offer to add it — Read the file if it exists, merge the rule into `permissions.allow` keeping everything else, and Write it back (create the file if absent). If the user declines, arm anyway and say that every tick will ask for permission.
+
+Then run step 1 of "One pass" to resolve the repo, and invoke the `loop` skill with **this body verbatim** — substituting only the interval (`config.poll_interval_minutes` minutes, or the one given in the input):
 
 ```
 Skill(skill="loop", args="15m Run this and nothing else: ${CLAUDE_SKILL_DIR}/scripts/scan.sh --once
@@ -64,6 +72,7 @@ ${CLAUDE_SKILL_DIR}/scripts/scan.sh --mark-armed <interval in whole minutes>
 Rules for the recurring form:
 
 - Keep the body exactly as written. A quiet tick is one Bash call and one printed line; the tick never loads this file. Never put `/gh-watch-reviews` in a `/loop` body.
+- The frontmatter grant covers only the invoking turn (the first pass and `--mark-armed`). Every tick, and the post-review re-scan in candidates.md, runs without a prompt only through the persistent rule above.
 - A tick only reports. The user starts a pass by typing `/gh-watch-reviews`; never start one from a tick's output.
 - A failed tick needs no handling; the next tick simply runs.
 - Always run `--mark-armed` after arming; without it, a check that stopped is indistinguishable from one that was never set up.
