@@ -5,7 +5,8 @@
 // touching that page's own DOM.
 //
 // Run it through the Playwright MCP with playwright:browser_run_code_unsafe,
-// after injecting the scripts under test:
+// after injecting the scripts under test (each *Src below is that file's
+// text as a JSON string literal — JSON.stringify it, never a template literal):
 //   code: async (page) => {
 //     for (const f of [afterActionSrc, alignmentSrc, clickableSrc,
 //                      inventorySrc, overflowSrc, visibilitySrc, selfTestSrc]) {

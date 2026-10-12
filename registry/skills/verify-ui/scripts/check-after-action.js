@@ -6,7 +6,9 @@
 //
 // Run it through the Playwright MCP with playwright:browser_run_code_unsafe:
 //   1. Inject — defines both functions in the page:
-//      code: async (page) => page.evaluate(`<the full text of this file>`)
+//      code: async (page) => page.evaluate(<this file's text as a JSON string literal>)
+//      (JSON.stringify the file text and paste the result — never a template
+//      literal: the file contains backticks and ${…}, which break parsing)
 //   2. Setup:
 //      code: async (page) => page.evaluate(
 //        (opts) => setupAfterAction(opts),

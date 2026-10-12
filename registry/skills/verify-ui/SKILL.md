@@ -64,7 +64,8 @@ For EVERY measurement, follow this exact sequence:
 ### After-action state checks (the most common check — start here)
 This is a 3-stage check: setup observer, perform click with Playwright, collect results.
 1. Read: `Read ${CLAUDE_SKILL_DIR}/scripts/check-after-action.js`
-2. Inject into page: `page.evaluate(scriptContent)`
+2. Inject into page: `page.evaluate(scriptContent)` — scriptContent is the file text
+   as a JSON string literal (see "How to inject scripts")
 3. Setup: `page.evaluate((opts) => setupAfterAction(opts), { scope: '[role="dialog"]', expect: [{ selector: '.success-message', visible: true }, { selector: '.loading-spinner', visible: false }], timeout: 5000 })`
 4. Click with Playwright: `page.locator('.submit-button').click()`
 5. Collect: `page.evaluate(() => collectAfterAction())`
@@ -77,8 +78,8 @@ Use checkVisibilityTransition instead when tracking temporary elements
 
 ### Alignment checks
 1. Read the script: `Read ${CLAUDE_SKILL_DIR}/scripts/check-alignment.js`
-2. Inject into page: `page.evaluate(scriptContent)` where scriptContent is the 
-   full file you just read
+2. Inject into page: `page.evaluate(scriptContent)` where scriptContent is the
+   full file you just read, as a JSON string literal (see "How to inject scripts")
 3. Call: `page.evaluate(() => checkAlignment({ containerSelector: '...', scopeSelector: '...' }))`
 4. Interpret the result: check `behavior`, `alignment`, `gaps.uniform`, `gaps.value`
 
@@ -104,7 +105,8 @@ merely a fraction of a pixel apart.
 ### Visibility transition checks
 This is a 3-stage check: setup observer, perform click with Playwright, collect results.
 1. Read: `Read ${CLAUDE_SKILL_DIR}/scripts/check-visibility-transition.js`
-2. Inject into page: `page.evaluate(scriptContent)`
+2. Inject into page: `page.evaluate(scriptContent)` — scriptContent is the file text
+   as a JSON string literal (see "How to inject scripts")
 3. Setup: `page.evaluate((opts) => setupVisibilityTransition(opts), { target: '.spinner', scope: '[role="dialog"]', expected: [false, true, false], timeout: 5000 })`
 4. Click with Playwright: `page.locator('.submit-button').click()`
 5. Collect: `page.evaluate(() => collectVisibilityTransition())`
@@ -157,7 +159,10 @@ Scripts live on disk, NOT accessible from the browser. To inject:
    resolves wherever the skill is installed and whatever the current working
    directory is. Write it exactly like that — do not substitute a literal path.
 2. The file content is now in YOUR context (not the browser's)
-3. Inject via: `page.evaluate(fileContent)` — this defines the function in browser scope
+3. Inject via `page.evaluate(<fileContent as a JSON string literal>)` — this defines
+   the function in browser scope. Build the literal with JSON.stringify of the
+   file text (every script contains backticks and `${…}`, so pasting the text
+   into a template literal fails to parse before anything runs)
 4. Then call: `page.evaluate(() => checkAlignment({...}))`
 Do not use fetch() or import() to load scripts — the browser cannot read local files
 
