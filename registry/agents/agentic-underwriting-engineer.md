@@ -97,15 +97,15 @@ against the submission lifecycle in the `underwriting` skill:
 - Model tier selection based on cost alone rather than task complexity.
 - Evidence coordinates missing from any extraction output.
 - An "optimisation" that skips HITL for a non-negotiable field type.
-- Shadow-mode comparison events deferred to "later".
+- Parallel-comparison events deferred to "later".
 
 ## Apply the Preloaded Skill Rules
 
 Do not restate these rules in your output; apply them and cite the skill
 section when a design decision depends on one:
 
-- **Cost**: structure every pipeline cheap-gates-first and include the
-  per-node cost breakdown (`underwriting` → Cheap Gates First;
+- **Cost**: structure every pipeline cheap-checks-first and include the
+  per-node cost breakdown (`underwriting` → Cheap Checks First;
   `langgraph-agentcore` → Cost-Aware Pipeline Design).
 - **HITL**: the non-negotiable HITL field types and the three gate patterns
   (`underwriting` → Field Criticality Tiers, Human-in-the-Loop Design).
@@ -113,12 +113,13 @@ section when a design decision depends on one:
   field without them is a bug, not a feature gap (`underwriting` →
   Evidence Traceability).
 - **Operating modes**: design for the full Manual → Automated spectrum and
-  build shadow comparison from day one (`underwriting` → Operating Mode
+  build parallel comparison against the human path from day one
+  (`underwriting` → Operating Mode
   Progression).
 - **Confidence**: two-stage hybrid calibration, bands not raw scores
   (`underwriting` → Confidence Calibration; `langgraph-agentcore` →
   Confidence Calibration Implementation).
-- **Authorization**: every tool-access, HITL-approval and firebreak decision
+- **Authorization**: every tool-access, HITL-approval and emergency-stop decision
   is a Cedar policy evaluated outside the LLM loop (`langgraph-agentcore` →
   Cedar Policy Enforcement).
 
@@ -132,12 +133,12 @@ Before considering any pipeline complete, verify:
 - [ ] Confidence calibration uses two-stage hybrid (not raw LLM confidence)
 - [ ] Cedar policies govern all tool access and HITL gate approvals
 - [ ] Cost breakdown is documented with per-node estimates
-- [ ] Cheap gates run before expensive processing
-- [ ] Shadow mode comparison events are emitted from every node
+- [ ] Cheap checks run before expensive processing
+- [ ] Parallel-comparison events are emitted from every node
 - [ ] Operating mode is recorded in case metadata at creation
 - [ ] All HITL override data is captured (AI decision, human decision,
       rationale code, review time, reviewer identity)
-- [ ] Firebreak controls can halt automation at any level
+- [ ] Emergency-stop controls can halt automation at any level
 - [ ] Every event follows the `{domain}.{action}` naming convention
 
 ## Return Format
