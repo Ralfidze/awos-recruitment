@@ -63,11 +63,11 @@ CI only re-runs against the remote, so the loop can only be confirmed by pushing
 
 **With `--push`**:
 
-1. Check what a push would send. `git push` sends every commit between the upstream and HEAD, not just yours. `git log --oneline @{u}..<start commit>` must be empty: any commit it lists is the user's unpushed work. If it lists anything, or the branch has no upstream, don't push — report the fix commits as in the default case and name the user's commits that blocked the push
-2. Push the fix commits
+1. Run `git fetch` so `@{u}` is current, then check what a push would send. `git push` sends every commit between the upstream and HEAD, not just yours. `git log --oneline @{u}..<start commit>` must be empty: any commit it lists is the user's unpushed work. If it lists anything, or the branch has no upstream, don't push — report the fix commits as in the default case and name the user's commits that blocked the push
+2. Push the fix commits with a plain `git push`. Never force-push, and never pull, rebase or merge to make a push succeed. If the push is rejected (for example, non-fast-forward because the remote moved between the fetch and the push), stop and report the fix commits as in the default case, along with the rejection message
 3. Find every run for the commit you pushed: `gh run list --commit "$(git rev-parse HEAD)" --json databaseId,name,status,conclusion,url`. One push usually starts several workflows (CI, lint, CodeQL …), so take all of them, not the first; scoping to the commit keeps out other branches' runs. Runs can take a few seconds to appear, and not all at once; retry briefly until the list stops growing
 4. Wait for each: `gh run watch <databaseId> --exit-status`, once per run
-5. If any run reports new failures, loop back to Phase 1
+5. If any run reports new failures, loop back to Phase 1 — at most 2 more rounds. If CI is still red after that, or a failure reappears that an earlier round already fixed (likely flaky), stop and report what was pushed, what is still failing, and the run URLs
 
 ## Rules
 
@@ -77,6 +77,7 @@ CI only re-runs against the remote, so the loop can only be confirmed by pushing
 - One commit per fix
 - Revert failed attempts — don't stack patches
 - Never push without `--push` in the arguments
+- Never force-push, pull, rebase or merge to make a push succeed — a rejected push is reported, not recovered
 - If HEAD is ahead of its upstream (`git log --oneline @{u}..HEAD`), the CI log describes older code than the tree you are reading. Check whether those unpushed commits already touch the failing area and say so in the report — don't push to close the gap; those are the user's commits
 
 ## Common Pitfalls
@@ -90,3 +91,5 @@ CI only re-runs against the remote, so the loop can only be confirmed by pushing
 | `--no-verify` to bypass hooks | Fix the hook issue |
 | Trust the newest run in the repo | Scope `gh run list` with `--branch` or `--commit` |
 | Watch one run after a push | Watch every run the pushed commit started |
+| Recover a rejected push with `--force` or `pull --rebase` | Stop and report the rejection |
+| Keep fixing while CI stays red | Stop after 3 rounds total and report |
