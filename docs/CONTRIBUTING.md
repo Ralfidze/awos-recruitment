@@ -81,7 +81,7 @@ Instructions for the AI assistant go here...
 | `compatibility` | string | Environment requirements — intended products, system prerequisites (Agent Skills spec field). Max 500 characters. |
 | `metadata` | map of strings | Catalog data the spec keeps out of the top level: `version`, `author`, and the like. Claude Code does not act on its contents. |
 | `version` | string | Still accepted at the top level, but the validator warns (`version-top-level`). Put it under `metadata.version` instead. |
-| `argument-hint` | string | Hint for expected arguments. Use `[brackets]` for placeholders (e.g., `[filename]`); an angle-bracket placeholder such as `<PR URL>` is accepted with a warning (`frontmatter-xml-tags`). |
+| `argument-hint` | string | Hint for expected arguments. Write placeholders in `[brackets]` (e.g., `[filename]`). An angle-bracket placeholder such as `<PR URL>` is an error. |
 | `disable-model-invocation` | boolean | Prevent Claude from auto-loading this skill. |
 | `user-invocable` | boolean | Show/hide from the `/` slash command menu. |
 | `allowed-tools` | string | Comma-separated list of tools Claude can use. |
@@ -90,6 +90,8 @@ Instructions for the AI assistant go here...
 | `context` | string | Set to `fork` to run in an isolated subagent. |
 | `agent` | string | Subagent type when `context: fork` is set. |
 | `hooks` | object | Skill-scoped hooks configuration. |
+
+No text field in the front matter can contain an XML tag such as `<name>`. The platform bans tags only in `name` and `description`. The registry bans them in every text field, so placeholders use `[brackets]` everywhere.
 
 **No other fields are allowed.** The validator rejects unknown front matter fields.
 
@@ -125,7 +127,6 @@ Links, emphasis and dates are only checked in prose — fenced code blocks and i
 | `description-yaml-comment` | error | An unquoted `description` must not contain ` #` — YAML reads it as a comment and silently drops the rest, so the text Claude sees is shorter than what you wrote. Quote the value or use a folded block (`description: >-`). |
 | `description-trigger` | warning | The description says when to use the skill — a trigger clause such as "Use when …". |
 | `description-person` | warning | The description is written in third person ("Processes X…", not "I can…" or "helps you…"). |
-| `frontmatter-xml-tags` | warning | `argument-hint` contains an XML-like tag such as `<file>`. `name` and `description` with tags are schema errors (see above); hints only warn because `<placeholder>` is the conventional way to write them. |
 | `version-top-level` | warning | `version` is set at the top level of the front matter. Move it to `metadata.version`. |
 | `reference-toc` | warning | A reference file longer than 100 lines has a contents section in its first 40 lines — a "Contents" heading or at least three `[..](#..)` anchor links. |
 | `nested-reference` | warning | A reference file links to another reference file. Link it from `SKILL.md` instead so references stay one level deep. |

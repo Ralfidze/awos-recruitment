@@ -80,3 +80,8 @@ FrontmatterDescription = Annotated[
     AfterValidator(_check_description_length),
     AfterValidator(_reject_xml_tags),
 ]
+
+# Any other free-text front-matter value. The platform bans XML tags only in
+# name and description. The registry bans them in every text field as house
+# style, so a placeholder is written "[login]", not "<login>".
+FrontmatterText = Annotated[str, AfterValidator(_reject_xml_tags)]

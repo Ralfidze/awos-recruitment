@@ -20,8 +20,6 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import unquote
 
-from awos_recruitment_mcp.models._frontmatter_fields import has_xml_tag
-
 BEST_PRACTICES_URL = (
     "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices"
 )
@@ -44,7 +42,6 @@ RULE_FILE_ENCODING = "file-encoding"
 RULE_DESCRIPTION_YAML_COMMENT = "description-yaml-comment"
 # Rule ids — warnings.
 RULE_VERSION_TOP_LEVEL = "version-top-level"
-RULE_FRONTMATTER_XML_TAGS = "frontmatter-xml-tags"
 RULE_REFERENCE_TOC = "reference-toc"
 RULE_NESTED_REFERENCE = "nested-reference"
 RULE_DESCRIPTION_TRIGGER = "description-trigger"
@@ -545,33 +542,12 @@ def check_description(description: object) -> list[QualityIssue]:
 def check_frontmatter(metadata: dict[str, object]) -> list[QualityIssue]:
     """Warnings about front-matter fields the Pydantic model accepts.
 
-    ``name`` and ``description`` XML tags are hard errors raised by the model
-    (see ``models/_frontmatter_fields.py``). ``argument-hint`` is a Claude Code
-    field the Agent Skills spec does not cover, and ``<placeholder>`` is the
-    conventional way to write a hint, so a tag there only warns. A top-level
-    ``version`` is still accepted but the spec keeps catalog data under
-    ``metadata``.
+    XML tags in any text field are hard errors raised by the model (see
+    ``models/_frontmatter_fields.py``). A top-level ``version`` is still
+    accepted, but the spec keeps catalog data under ``metadata``.
     """
 
     issues: list[QualityIssue] = []
-
-    hint = metadata.get("argument-hint")
-    if isinstance(hint, str) and has_xml_tag(hint):
-        issues.append(
-            QualityIssue(
-                file="SKILL.md",
-                line=None,
-                rule=RULE_FRONTMATTER_XML_TAGS,
-                severity="warning",
-                message=(
-                    "argument-hint contains an XML-like tag — use [brackets] "
-                    "for placeholders. Not a platform limit (that applies to "
-                    "name and description only); it keeps hints consistent "
-                    "across the registry"
-                ),
-                field="argument-hint",
-            )
-        )
 
     if "version" in metadata:
         issues.append(
