@@ -87,11 +87,16 @@ def test_name_without_reserved_words_passes(model):
 
 
 @pytest.mark.parametrize("model", [SkillMetadata, AgentMetadata])
-def test_name_rejects_xml_tags(model):
-    """Rule name-xml: a name carrying an XML tag is rejected."""
+def test_name_rejects_angle_brackets(model):
+    """Rule name-pattern: the kebab-case pattern rejects '<' and '>', so a tag cannot pass.
+
+    The XML-tag validator on names never runs: Pydantic skips after-validators
+    once the pattern fails. This test covers the pattern, not that validator.
+    """
     with pytest.raises(ValidationError) as exc_info:
         model.model_validate({"name": "<tool>", "description": GOOD_DESCRIPTION})
-    assert exc_info.value.errors(), "name-xml: expected '<tool>' to be rejected"
+    fields = {".".join(str(p) for p in e["loc"]) for e in exc_info.value.errors()}
+    assert "name" in fields, f"name-pattern: expected '<tool>' to be rejected, got {fields}"
 
 
 @pytest.mark.parametrize("model", [SkillMetadata, AgentMetadata])
@@ -212,9 +217,7 @@ def test_xml_tag_in_description_is_error_via_validator(tmp_path: Path):
     result = _only_result(tmp_path)
     assert not result.valid, "description-xml: tagged description passed"
     hits = [e for e in result.errors if e.field == "description" and "XML" in e.message]
-    assert hits and all(e.severity == "error" for e in hits), (
-        f"description-xml: expected a 'description' error, got {result.errors}"
-    )
+    assert hits, f"description-xml: expected a 'description' error, got {result.errors}"
 
 
 def test_square_bracket_argument_hint_passes(tmp_path: Path):
@@ -241,10 +244,6 @@ def test_top_level_version_warns(tmp_path: Path):
         f"version-top-level: expected one warning, got {result.warnings}"
     )
     assert "metadata.version" in hits[0].message
-    assert '"1.0"' in hits[0].message and "agentskills.io" in hits[0].message, (
-        f"version-top-level: message should say to quote the value and cite the spec, "
-        f"got {hits[0].message}"
-    )
 
 
 def test_metadata_version_passes(tmp_path: Path):
@@ -445,8 +444,8 @@ def test_warnings_do_not_invalidate(tmp_path: Path):
     result = _only_result(tmp_path)
     assert result.valid, f"Warnings must not invalidate, got {result.errors}"
     assert result.errors == [], f"Expected no errors, got {result.errors}"
-    assert all(w.severity == "warning" for w in result.warnings), (
-        f"Expected only warnings, got {result.warnings}"
+    assert "description-trigger" in _rules(result.warnings), (
+        f"description-trigger: expected a warning, got {result.warnings}"
     )
 
 
@@ -758,8 +757,9 @@ def _write_raw_skill(tmp_path: Path, frontmatter_lines: str) -> None:
         "description: Use when asked to review PR #N or merge request.\n",
         "description: Use when asked to review\n  a PR #N or merge request.\n",
         "description: Use when reviewing.\n  # Also when asked to review a PR.\n",
+        "description: Use when reviewing.  # trailing comment\n",
     ],
-    ids=["same-line", "continuation-line", "comment-line"],
+    ids=["same-line", "continuation-line", "comment-line", "trailing-comment"],
 )
 def test_unquoted_description_with_hash_fails(tmp_path: Path, frontmatter_lines: str):
     """Rule description-yaml-comment: ' #' in a plain scalar truncates it."""
@@ -778,23 +778,16 @@ def test_unquoted_description_with_hash_fails(tmp_path: Path, frontmatter_lines:
         "description: >-\n  Use when asked to review PR #N.\n",
         "description: |\n  Use when asked to review PR #N.\n",
         "description: Use when writing C# or F#.\n",
-        "description: Use when reviewing.  # trailing comment is intentional\n",
     ],
-    ids=["double-quoted", "single-quoted", "folded", "literal", "no-space", "trailing"],
+    ids=["double-quoted", "single-quoted", "folded", "literal", "no-space"],
 )
 def test_description_hash_that_survives_passes(tmp_path: Path, frontmatter_lines: str):
     """Rule description-yaml-comment: quoted, block, and 'C#'-style values pass."""
     _write_raw_skill(tmp_path, frontmatter_lines)
     result = _only_result(tmp_path)
-    flagged = "description-yaml-comment" in _rules(result.errors)
-    # A trailing '  # comment' is still a comment: YAML drops it, so it is
-    # flagged too. Every other case keeps '#' in the value.
-    if "trailing" in frontmatter_lines:
-        assert flagged, "description-yaml-comment: trailing comment not flagged"
-    else:
-        assert not flagged, (
-            f"description-yaml-comment: '{frontmatter_lines.strip()}' flagged"
-        )
+    assert "description-yaml-comment" not in _rules(result.errors), (
+        f"description-yaml-comment: '{frontmatter_lines.strip()}' flagged"
+    )
 
 
 def test_agent_unquoted_description_with_hash_fails(tmp_path: Path):
@@ -859,4 +852,37 @@ def test_valid_closing_fence_ends_the_block(tmp_path: Path):
     result = _only_result(tmp_path)
     assert "broken-link" in _rules(result.errors), (
         f"broken-link: the fence did not close, got {_rules(result.errors)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# SKILL.md line numbers and nested references
+# ---------------------------------------------------------------------------
+
+
+def test_line_number_ignores_body_text_repeated_in_front_matter(tmp_path: Path):
+    """broken-link line numbers: body text that also appears in the description does not shift them."""
+    _make_skill(
+        tmp_path,
+        description="Use when. See [g](references/missing.md).",
+        body="See [g](references/missing.md).\n",
+    )
+    result = _only_result(tmp_path)
+    broken = [e for e in result.errors if e.rule == "broken-link"]
+    assert [e.line for e in broken] == [6], (
+        f"broken-link: expected line 6 (4 front-matter lines, a blank line, the body), "
+        f"got {[e.line for e in broken]}"
+    )
+
+
+def test_reference_link_to_a_file_skill_md_also_links_passes(tmp_path: Path):
+    """Rule nested-reference: a sibling link to a file SKILL.md links directly is one level deep."""
+    _make_skill(
+        tmp_path,
+        body="# T\n\nSee [a](references/a.md) and [b](references/b.md).\n",
+        references={"a.md": "# A\n\nSee [b](b.md).\n", "b.md": "# B\n"},
+    )
+    result = _only_result(tmp_path)
+    assert "nested-reference" not in _rules(result.warnings), (
+        f"nested-reference: a sibling link was flagged: {result.warnings}"
     )

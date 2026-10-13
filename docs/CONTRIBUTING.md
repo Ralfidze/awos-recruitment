@@ -129,7 +129,7 @@ Links, emphasis and dates are only checked in prose — fenced code blocks and i
 | `description-person` | warning | The description is written in third person ("Processes X…", not "I can…" or "helps you…"). |
 | `version-top-level` | warning | `version` is set at the top level of the front matter. Move it to `metadata.version`. |
 | `reference-toc` | warning | A reference file longer than 100 lines has a contents section in its first 40 lines — a "Contents" heading or at least three `[..](#..)` anchor links. |
-| `nested-reference` | warning | A reference file links to another reference file. Link it from `SKILL.md` instead so references stay one level deep. |
+| `nested-reference` | warning | A reference file links to another reference file that `SKILL.md` does not link. Link it from `SKILL.md` so references stay one level deep. A link between two files that `SKILL.md` both links is fine. |
 | `caps-emphasis` | warning | Fewer than five all-caps emphasis words (`CRITICAL`, `MUST`, `NEVER`, `ALWAYS`, `IMPORTANT`) per file outside code. State the rule plainly and keep emphasis for the one that matters. |
 | `time-sensitive` | warning | No dated phrases ("before January 2025", "as of Q3 2024") outside a section headed "Old patterns", "Legacy", "Deprecated", "History" or "Changelog". |
 

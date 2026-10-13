@@ -264,8 +264,14 @@ def _check_links(
     text: str,
     prose_lines: list[str],
     bundled: set[Path],
+    skill_md_links: set[Path],
 ) -> list[QualityIssue]:
-    """Broken relative links, Windows-style paths, and nested references."""
+    """Broken relative links, Windows-style paths, and nested references.
+
+    A reference that links to another reference is nested only when SKILL.md
+    does not link to that target too: the guide's concern is a file that is
+    reachable only through another reference, not sibling cross-links.
+    """
 
     issues: list[QualityIssue] = []
     file_path = skill_dir / file_rel
@@ -322,6 +328,7 @@ def _check_links(
             and resolved.suffix == ".md"
             and resolved != skill_md
             and resolved != file_path.resolve()
+            and resolved not in skill_md_links
         ):
             issues.append(
                 QualityIssue(
@@ -330,9 +337,9 @@ def _check_links(
                     rule=RULE_NESTED_REFERENCE,
                     severity="warning",
                     message=(
-                        f"Reference links to another reference '{target}' — "
-                        "link it from SKILL.md instead so references stay one "
-                        f"level deep {_cite('Avoid deeply nested references')}"
+                        f"Reference links to '{target}', which SKILL.md does "
+                        "not link — link it from SKILL.md so references stay "
+                        f"one level deep {_cite('Avoid deeply nested references')}"
                     ),
                 )
             )
@@ -581,6 +588,39 @@ def check_frontmatter(metadata: dict[str, object]) -> list[QualityIssue]:
     return issues
 
 
+def _body_line_offset(text: str, body: str) -> int:
+    """Return how many lines of *text* come before *body*.
+
+    The search starts after the closing ``---`` of the front matter, so body
+    text that also appears in the front matter does not shift the result. If
+    the body is not found as written, the body is taken to start right after
+    the front matter.
+    """
+
+    lines = text.splitlines(keepends=True)
+    start = 0
+    if lines and lines[0].strip() == "---":
+        for index in range(1, len(lines)):
+            if lines[index].strip() == "---":
+                start = sum(len(line) for line in lines[: index + 1])
+                break
+    position = text.find(body, start) if body else -1
+    if position < 0:
+        position = start
+    return text.count("\n", 0, position)
+
+
+def _local_link_targets(skill_dir: Path, body: str) -> set[Path]:
+    """Resolved paths of every relative link in the SKILL.md body."""
+
+    targets: set[Path] = set()
+    for _, target in _link_targets(_strip_code(body)):
+        path = _local_path(target)
+        if path is not None and "\\" not in path:
+            targets.add((skill_dir / path).resolve())
+    return targets
+
+
 def _bundled_files(skill_dir: Path) -> set[Path]:
     """Files the install bundle ships: SKILL.md plus flat references/, scripts/ and assets/."""
 
@@ -625,7 +665,8 @@ def check_skill_quality(skill_dir: Path, body: str) -> list[QualityIssue]:
     # Line numbers for SKILL.md are reported against the body; shift them so
     # they point at the right line of the file.
     skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
-    offset = skill_text.count("\n", 0, skill_text.find(body)) if body else 0
+    offset = _body_line_offset(skill_text, body)
+    skill_md_links = _local_link_targets(skill_dir, body)
 
     documents: list[tuple[str, str, int]] = [("SKILL.md", body, offset)]
     references_dir = skill_dir / "references"
@@ -654,7 +695,7 @@ def check_skill_quality(skill_dir: Path, body: str) -> list[QualityIssue]:
 
     for file_rel, text, line_offset in documents:
         prose = _strip_code(text)
-        found = _check_links(skill_dir, file_rel, text, prose, bundled)
+        found = _check_links(skill_dir, file_rel, text, prose, bundled, skill_md_links)
         found += _check_caps(file_rel, prose)
         found += _check_time_sensitive(file_rel, prose)
         if file_rel != "SKILL.md":
