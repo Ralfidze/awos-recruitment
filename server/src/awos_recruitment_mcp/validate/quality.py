@@ -15,6 +15,7 @@ the guide section it enforces.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -87,9 +88,13 @@ CAPS_EMPHASIS_THRESHOLD = 5
 
 _CAPS_EMPHASIS = re.compile(r"\b(" + "|".join(CAPS_EMPHASIS_WORDS) + r")\b")
 
-# Fenced code blocks (``` or ~~~, three or more). Closing fence must use the
-# same character and be at least as long as the opening one.
-_FENCE_OPEN = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+# Fenced code blocks, per CommonMark: a fence is three or more ` or ~,
+# indented by at most three spaces. A backtick fence's info string cannot
+# contain a backtick, so "```npm run build```" is inline code, not a fence.
+# A closing fence uses the opener's character, is at least as long, and has
+# nothing after it but whitespace.
+_FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}(?=[^`]*$)|~{3,})")
+_FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 _INLINE_CODE = re.compile(r"(`+)(.+?)\1")
 
 # Inline links and images: [text](target "title"). Reference-style
@@ -179,6 +184,33 @@ def _cite(section: str, url: str = BEST_PRACTICES_URL) -> str:
     return f"(see '{section}' in {url})"
 
 
+def _fence_lines(text: str) -> Iterator[tuple[int, str, bool]]:
+    """Yield ``(line_number, line, in_code)`` for every line of *text*.
+
+    ``in_code`` is true for fence lines and for every line between them. An
+    unclosed fence runs to the end of the text, as in CommonMark.
+    """
+
+    fence: str | None = None
+    for number, line in enumerate(text.splitlines(), start=1):
+        if fence is not None:
+            close = _FENCE_CLOSE.match(line)
+            if (
+                close
+                and close.group(1)[0] == fence[0]
+                and len(close.group(1)) >= len(fence)
+            ):
+                fence = None
+            yield number, line, True
+            continue
+        opener = _FENCE_OPEN.match(line)
+        if opener:
+            fence = opener.group(1)
+            yield number, line, True
+            continue
+        yield number, line, False
+
+
 def _strip_code(text: str) -> list[str]:
     """Return *text* as lines with code blanked out, line numbers preserved.
 
@@ -186,42 +218,21 @@ def _strip_code(text: str) -> list[str]:
     links, emphasis, and dates inside code samples are not mistaken for prose.
     """
 
-    lines = text.splitlines()
-    out: list[str] = []
-    fence: str | None = None
-    for line in lines:
-        if fence is not None:
-            stripped = line.strip()
-            if stripped.startswith(fence) and set(stripped) == {fence[0]}:
-                fence = None
-            out.append("")
-            continue
-        match = _FENCE_OPEN.match(line)
-        if match:
-            fence = match.group(1)
-            out.append("")
-            continue
-        out.append(_INLINE_CODE.sub(lambda m: " " * len(m.group(0)), line))
-    return out
+    return [
+        "" if in_code else _INLINE_CODE.sub(lambda m: " " * len(m.group(0)), line)
+        for _, line, in_code in _fence_lines(text)
+    ]
 
 
 def _inline_code_spans(text: str) -> list[tuple[int, str]]:
     """Return ``(line_number, code)`` for every inline code span outside fences."""
 
-    spans: list[tuple[int, str]] = []
-    fence: str | None = None
-    for number, line in enumerate(text.splitlines(), start=1):
-        if fence is not None:
-            stripped = line.strip()
-            if stripped.startswith(fence) and set(stripped) == {fence[0]}:
-                fence = None
-            continue
-        match = _FENCE_OPEN.match(line)
-        if match:
-            fence = match.group(1)
-            continue
-        spans.extend((number, m.group(2)) for m in _INLINE_CODE.finditer(line))
-    return spans
+    return [
+        (number, m.group(2))
+        for number, line, in_code in _fence_lines(text)
+        if not in_code
+        for m in _INLINE_CODE.finditer(line)
+    ]
 
 
 def _link_targets(prose_lines: list[str]) -> list[tuple[int, str]]:

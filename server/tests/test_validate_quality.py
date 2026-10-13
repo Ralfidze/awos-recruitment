@@ -37,13 +37,14 @@ def _make_skill(
     skill_dir = tmp_path / "skills" / name
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
-        f"---\nname: {name}\ndescription: {json.dumps(description)}\n---\n\n{body}"
+        f"---\nname: {name}\ndescription: {json.dumps(description)}\n---\n\n{body}",
+        encoding="utf-8",
     )
     for ref_name, content in (references or {}).items():
         (skill_dir / "references").mkdir(exist_ok=True)
-        (skill_dir / "references" / ref_name).write_text(content)
+        (skill_dir / "references" / ref_name).write_text(content, encoding="utf-8")
     for rel, content in (extra_files or {}).items():
-        (skill_dir / rel).write_text(content)
+        (skill_dir / rel).write_text(content, encoding="utf-8")
     return skill_dir
 
 
@@ -170,7 +171,8 @@ def test_validator_reports_argument_hint_tag_on_its_field(tmp_path: Path):
     skill_md.write_text(
         skill_md.read_text().replace(
             "---\n\n", 'argument-hint: "exclude: <login>"\n---\n\n', 1
-        )
+        ),
+        encoding="utf-8",
     )
     result = _only_result(tmp_path)
     assert not result.valid, "frontmatter-xml: '<login>' in argument-hint passed"
@@ -199,7 +201,8 @@ def _make_skill_with_frontmatter(tmp_path: Path, frontmatter: str) -> None:
     skill_dir = tmp_path / "skills" / "widget-skill"
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
-        f"---\n{frontmatter}---\n\n# Widgets\n\nFormat them.\n"
+        f"---\n{frontmatter}---\n\n# Widgets\n\nFormat them.\n",
+        encoding="utf-8",
     )
 
 
@@ -322,7 +325,7 @@ def test_link_outside_skill_dir_fails(tmp_path: Path):
     """Rule broken-link: a link that escapes the skill directory is an error."""
     skill_dir = _make_skill(tmp_path, body="# T\n\nSee [other](../other/SKILL.md).\n")
     (skill_dir.parent / "other").mkdir()
-    (skill_dir.parent / "other" / "SKILL.md").write_text("x")
+    (skill_dir.parent / "other" / "SKILL.md").write_text("x", encoding="utf-8")
     result = validate_skills(tmp_path)
     ours = next(r for r in result if "widget-skill" in r.file)
     assert "broken-link" in _rules(ours.errors), (
@@ -409,7 +412,8 @@ def _write_agent(tmp_path: Path, skills: list[str]) -> None:
     skills_yaml = "".join(f"  - {s}\n" for s in skills)
     (agents_dir / "helper.md").write_text(
         f"---\nname: helper\ndescription: Helps.\nskills:\n{skills_yaml}---\n\n"
-        "You help.\n"
+        "You help.\n",
+        encoding="utf-8",
     )
 
 
@@ -743,7 +747,8 @@ def _write_raw_skill(tmp_path: Path, frontmatter_lines: str) -> None:
     skill_dir = tmp_path / "skills" / "widget-skill"
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
-        f"---\nname: widget-skill\n{frontmatter_lines}---\n\n# T\n\nBody.\n"
+        f"---\nname: widget-skill\n{frontmatter_lines}---\n\n# T\n\nBody.\n",
+        encoding="utf-8",
     )
 
 
@@ -797,7 +802,8 @@ def test_agent_unquoted_description_with_hash_fails(tmp_path: Path):
     agents_dir = tmp_path / "agents"
     agents_dir.mkdir()
     (agents_dir / "helper.md").write_text(
-        "---\nname: helper\ndescription: Reviews PR #N end to end.\n---\n\nYou help.\n"
+        "---\nname: helper\ndescription: Reviews PR #N end to end.\n---\n\nYou help.\n",
+        encoding="utf-8",
     )
     (result,) = validate_agents(tmp_path)
     assert "description-yaml-comment" in _rules(result.errors), (
@@ -811,4 +817,46 @@ def test_description_with_single_quoted_term_still_warns(tmp_path: Path):
     result = _only_result(tmp_path)
     assert "description-trigger" in _rules(result.warnings), (
         f"description-trigger: a single quoted term counted as triggers: {result.warnings}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Code fences (CommonMark rules shared by every body check)
+# ---------------------------------------------------------------------------
+
+
+def test_backtick_line_with_backticks_is_not_a_fence(tmp_path: Path):
+    """Fences: "```npm run build```" is inline code, so later lines are still checked."""
+    _make_skill(
+        tmp_path,
+        body="# T\n\n```npm run build```\n\nSee [g](references/missing.md).\n",
+    )
+    result = _only_result(tmp_path)
+    assert "broken-link" in _rules(result.errors), (
+        f"broken-link: a backtick line hid the rest of the file, got {_rules(result.errors)}"
+    )
+
+
+@pytest.mark.parametrize(
+    "closer",
+    ["    ```", "``", "~~~", "``` text"],
+    ids=["indented-4", "too-short", "other-char", "trailing-text"],
+)
+def test_invalid_closing_fence_keeps_the_block_open(tmp_path: Path, closer: str):
+    """Fences: a line that cannot close the fence leaves the next lines as code."""
+    body = f"# T\n\n```\ncode\n{closer}\n[g](references/missing.md)\n```\n"
+    _make_skill(tmp_path, body=body)
+    result = _only_result(tmp_path)
+    assert "broken-link" not in _rules(result.errors), (
+        f"broken-link: '{closer}' closed the fence too early: {result.errors}"
+    )
+
+
+def test_valid_closing_fence_ends_the_block(tmp_path: Path):
+    """Fences: a longer closer with trailing spaces ends the block."""
+    body = "# T\n\n```python\ncode\n````  \n\nSee [g](references/missing.md).\n"
+    _make_skill(tmp_path, body=body)
+    result = _only_result(tmp_path)
+    assert "broken-link" in _rules(result.errors), (
+        f"broken-link: the fence did not close, got {_rules(result.errors)}"
     )
