@@ -30,6 +30,9 @@ PROMPTING_URL = (
     "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/"
     "claude-prompting-best-practices"
 )
+# Front-matter fields beyond name/description (license, compatibility,
+# metadata) come from the open Agent Skills spec, not the authoring guide.
+AGENT_SKILLS_SPEC_URL = "https://agentskills.io/specification"
 
 Severity = Literal["error", "warning"]
 
@@ -129,12 +132,18 @@ _TIME_SENSITIVE = re.compile(
 _TRIGGER_PHRASE = re.compile(
     r"\buse (?:this(?: skill| agent)? )?(?:when|whenever|for|if|to|with|in|on)\b"
     r"|\bshould be used\b"
-    r"|\bwhen (?:the user|a user|users|working|writing|building|creating|"
-    r"reviewing|debugging|asked|you)\b"
+    r"|\bwhen (?:the user|a user|users|the request|the prompt|working|writing|"
+    r"building|creating|reviewing|debugging|asked|you)\b"
     r"|\btrigger(?:s|ed)?\b"
     r"|\bapplies (?:when|to)\b",
     re.IGNORECASE,
 )
+
+# A list of quoted requests ("review this PR", "do a code review") is a
+# trigger clause too, just without a "Use when" lead-in. Two multi-word
+# quotes are required so a single quoted term is not mistaken for one.
+_QUOTED_REQUEST = re.compile(r'["\u201c]([^"\u201d]+?\s[^"\u201d]+?)["\u201d]')
+_MIN_QUOTED_REQUESTS = 2
 
 # First/second person voice. "when you ..." inside a trigger clause is common
 # and harmless, so only statements about the skill itself are flagged.
@@ -498,7 +507,10 @@ def check_description(description: object) -> list[QualityIssue]:
         return []
 
     issues: list[QualityIssue] = []
-    if not _TRIGGER_PHRASE.search(description):
+    has_trigger = _TRIGGER_PHRASE.search(description) or (
+        len(_QUOTED_REQUEST.findall(description)) >= _MIN_QUOTED_REQUESTS
+    )
+    if not has_trigger:
         issues.append(
             QualityIssue(
                 file="SKILL.md",
@@ -552,9 +564,10 @@ def check_frontmatter(metadata: dict[str, object]) -> list[QualityIssue]:
                 rule=RULE_FRONTMATTER_XML_TAGS,
                 severity="warning",
                 message=(
-                    "argument-hint contains an XML-like tag — front matter "
-                    "should be plain text; use [brackets] for placeholders "
-                    f"{_cite('Skill structure')}"
+                    "argument-hint contains an XML-like tag — use [brackets] "
+                    "for placeholders. Not a platform limit (that applies to "
+                    "name and description only); it keeps hints consistent "
+                    "across the registry"
                 ),
                 field="argument-hint",
             )
@@ -570,7 +583,9 @@ def check_frontmatter(metadata: dict[str, object]) -> list[QualityIssue]:
                 message=(
                     "version is a top-level front-matter field; the Agent "
                     "Skills spec keeps catalog data under metadata — move it "
-                    f"to metadata.version {_cite('Skill structure')}"
+                    "to metadata.version and quote it (version: \"1.0\"), "
+                    "since metadata values must be strings "
+                    f"{_cite('metadata field', AGENT_SKILLS_SPEC_URL)}"
                 ),
                 field="version",
             )

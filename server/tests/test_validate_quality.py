@@ -202,6 +202,10 @@ def test_top_level_version_warns(tmp_path: Path):
         f"version-top-level: expected one warning, got {result.warnings}"
     )
     assert "metadata.version" in hits[0].message
+    assert '"1.0"' in hits[0].message and "agentskills.io" in hits[0].message, (
+        f"version-top-level: message should say to quote the value and cite the spec, "
+        f"got {hits[0].message}"
+    )
 
 
 def test_metadata_version_passes(tmp_path: Path):
@@ -498,6 +502,8 @@ def test_description_without_trigger_warns(tmp_path: Path):
         "Formats widgets. Use when the user asks to format widgets.",
         "This skill should be used when the user asks to \"format a widget\".",
         "Formats widgets. Triggers on 'widget', 'gadget'.",
+        'Reviews pull requests \u2014 "review this PR", "do a code review on PR 7".',
+        'Reviews the branch when the request says "review locally".',
     ],
 )
 def test_description_with_trigger_passes(tmp_path: Path, description: str):
@@ -760,4 +766,13 @@ def test_agent_unquoted_description_with_hash_fails(tmp_path: Path):
     (result,) = validate_agents(tmp_path)
     assert "description-yaml-comment" in _rules(result.errors), (
         f"description-yaml-comment: agent truncation not flagged, got {_rules(result.errors)}"
+    )
+
+
+def test_description_with_single_quoted_term_still_warns(tmp_path: Path):
+    """Rule description-trigger: one quoted term is not a list of trigger requests."""
+    _make_skill(tmp_path, description='Formats widgets and "gadget files".')
+    result = _only_result(tmp_path)
+    assert "description-trigger" in _rules(result.warnings), (
+        f"description-trigger: a single quoted term counted as triggers: {result.warnings}"
     )
