@@ -30,7 +30,7 @@ Every item gets exactly one category. The action column is what the main session
 ## Drafting rules
 
 - `Read` the file at each item's `path` around `line` before drafting — never a proposed fix without seeing the code. For an outdated thread (public, `line` is null) locate the code from `originalLine` and `diffHunk` (GitHub) or the note's `position` (GitLab).
-- For a long list, fan the reading out to nested subagents (a small, fast model suits collection). Categorizing and drafting stay in this one context so the replies sound like one author.
+- Read every file yourself — the Agent tool is unavailable inside a subagent, so there is no fan-out. Categorizing and drafting stay in this one context so the replies sound like one author.
 - Use the off-platform source material to check whether a point was already settled elsewhere (then `pushback` or `dismiss-resolve`, citing it) or to understand the intent behind a change under question. Do not invent context that isn't in the material.
 - Return, per item: the category, the actual reply text, and — for a `fix` — a one-line description of the code change. Not placeholders, not "reply TBD".
 
@@ -49,7 +49,7 @@ Return the plan as Markdown that the main session can write verbatim to `review/
 
 1. `fix` — src/api/retry.ts:42 — @reviewer
    Fix: add jitter to the webhook retry backoff
-   Reply: Added ±20% jitter to the backoff so retries from many clients don't align. Pushed in <commit>.
+   Reply: Added ±20% jitter to the backoff so retries from many clients don't align; the fix is in the next push.
 
 2. `pushback` — src/api/retry.ts:10 — @coderabbitai
    Reply: The constant is intentionally module-scoped; it's read once at import and never reassigned, so a getter adds indirection without a benefit.

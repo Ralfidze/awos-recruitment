@@ -57,8 +57,8 @@ Before dispatching, fetch any off-platform discussion the request links or refer
 
 Dispatch one triage subagent with the Agent tool (`subagent_type: "general-purpose"` — a fresh context; **not** `"fork"`, which inherits this conversation and defeats the isolation). Hand it exactly:
 
-- the PR ref and the checkout path from step 1 (local: the repo path and the review file's origin);
-- every feedback item verbatim: author, `path:line`, full thread contents (public: include `originalLine` and `diffHunk` for outdated threads where `line` is null);
+- the platform (GitHub or GitLab), the PR ref, and the checkout path from step 1 (local: the repo path and the review file's origin);
+- every feedback item verbatim: author, `path:line`, full thread contents; for outdated threads where `line` is null include `originalLine` and `diffHunk` (GitHub) or the note's `position` — `old_line`, `new_line`, `head_sha` (GitLab);
 - the off-platform source material collected above;
 - the path to [references/triage.md](references/triage.md), with the instruction to follow it — categories, drafting rules, reply voice, output format — and return the plan.
 
@@ -68,11 +68,11 @@ The subagent returns each item as `fix`, `pushback`, `dismiss-resolve`, or `clar
 
 **Materialize the returned plan with `Write`** to `review/pr-<N>-comments-plan.md` in the repo. Create `review/` if missing and tell the user it's new; don't gitignore it automatically. A plan that exists only in the subagent's reply or in thinking does not exist for the gate — the `Write` call is the proof it does. Record the plan as the subagent returned it; if you disagree with a categorization, add a marked `session note: …` to that item instead of reclassifying, and let the user rule at the gate.
 
-If agent dispatch is unavailable (e.g. this skill is already at the subagent nesting depth limit): triage inline following [references/triage.md](references/triage.md), and carry a one-line independence caveat into the step 6 summary (never into posted replies).
+If agent dispatch is unavailable (the Agent tool does not exist inside a subagent, so this skill cannot dispatch when it is itself running as one): triage inline following [references/triage.md](references/triage.md), and carry a one-line independence caveat into the step 6 summary (never into posted replies).
 
 ### 3. Results gate
 
-Present the plan by printing the step 2 file's full content **as message text** — every item with its category, `path:line`, author, and the actual proposed fix and reply text, not placeholders. Then call `AskUserQuestion`, and include the plan file's path in the question itself. Only the `Write` call and the text visible in this turn count as having presented the plan; if there is no plan file, go back and write it. Session-wide brevity or compression modes govern your commentary, never the plan — a file path or a recap does not satisfy this step. Ask the user how to proceed:
+Present the plan by printing the step 2 file's full content **as message text** — every item with its category, `path:line`, author, and the actual proposed fix and reply text, not placeholders. Then call `AskUserQuestion`, and include the plan file's path in the question itself. Only the `Write` call and the text visible in this turn count as having presented the plan; if there is no plan file, go back and write it. A file path or a recap does not satisfy this step. Ask the user how to proceed:
 
 - **Proceed** — apply the plan as-is.
 - **Back findings with external sources** — before applying, verify the contestable items against a trusted source (official docs, the spec, a high-signal StackOverflow or GitHub issue, or — for an architectural claim about how the system fits together — the project's own sibling repos and artifacts, not just external docs), cite it in the fix/reply, and drop or downgrade items that don't hold up. Then re-present the revised plan and return to this gate.

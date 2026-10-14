@@ -14,7 +14,7 @@
 
 ## No `context: fork`
 
-Forked skills run as subagents, and subagents cannot use `AskUserQuestion` — the per-item approval gate this skill is built around. Nested Agent dispatch is not the constraint (subagents can dispatch their own subagents, so step 2 would still work); the gate is. For isolation from other work, invoke the skill in a dedicated session instead.
+Forked skills run as subagents, and a subagent has neither `AskUserQuestion` — the per-item approval gate this skill is built around — nor the Agent tool, so a forked run could not dispatch the step 2 triage subagent either. The Agent tool is unavailable inside any subagent; that is the nesting limit behind step 2's inline-triage fallback, which exists for the case where this skill is itself invoked from a subagent. For isolation from other work, invoke the skill in a dedicated session instead.
 
 ## Triage runs in a fresh subagent
 
