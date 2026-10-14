@@ -1,6 +1,6 @@
 # React Best Practices
 
-Performance optimization guidelines for React applications. 37 rules across 7 categories — from critical (eliminating waterfalls, reducing bundle size) to incremental (advanced patterns).
+Performance optimization guidelines for React applications. 37 rules across 7 categories, ordered from the highest-impact categories to incremental ones.
 
 > This skill is based on the [React Best Practices](https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices) skill originally created by [Vercel Labs](https://github.com/vercel-labs). Big thanks to the authors for the foundational work.
 
@@ -63,8 +63,8 @@ is the suggested review order. See `SKILL.md` for the impact of each individual 
 |----------|----------|--------|-------|
 | 1 | Eliminating Waterfalls | HIGH–CRITICAL | 2 |
 | 2 | Bundle Size Optimization | MEDIUM–CRITICAL | 4 |
-| 3 | Client-Side Data Fetching | LOW–MEDIUM-HIGH | 4 |
+| 3 | Client-Side Data Fetching | LOW to MEDIUM-HIGH | 4 |
 | 4 | Re-render Optimization | LOW–MEDIUM | 7 |
 | 5 | Rendering Performance | LOW–HIGH | 6 |
-| 6 | JavaScript Performance | LOW–MEDIUM-HIGH | 12 |
+| 6 | JavaScript Performance | LOW to MEDIUM-HIGH | 12 |
 | 7 | Advanced Patterns | LOW | 2 |

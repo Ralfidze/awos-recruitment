@@ -37,6 +37,7 @@ function AnimationPlayer({ enabled, setEnabled }: { enabled: boolean; setEnabled
     }
   }, [enabled, frames, setEnabled])
 
+  if (!enabled) return null
   if (!frames) return <Skeleton />
   return <Canvas frames={frames} />
 }

@@ -41,4 +41,5 @@ Because the DOM survives, side effects that live in the DOM survive too — a hi
 cleanup function that pauses them.
 
 `<Activity>` is stable from React 19.2. On earlier versions, keep the component
-mounted and hide it with CSS instead.
+mounted and hide it with CSS instead; Effects keep running while hidden, so gate
+subscriptions, timers, and polling on the visibility prop.

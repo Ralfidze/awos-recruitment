@@ -5,8 +5,10 @@ description: >-
   data-fetching waterfalls, bundle size, and the JavaScript hot paths inside
   components. Use when the user mentions slow or janky renders, unnecessary
   re-renders, memoization (React.memo / useMemo / useCallback), lazy loading,
-  code splitting, bundle size, request waterfalls, laggy scrolling or typing, or
-  asks to review, profile, or speed up React code. Not a general React authoring
+  code splitting, bundle size, request waterfalls, duplicate or repeated API
+  requests, request deduplication, caching fetched data in localStorage, scroll
+  or touch event listeners, laggy scrolling or typing, or asks to review,
+  profile, or speed up React code. Not a general React authoring
   guide — for folder and layer structure use react-feature-sliced-design, for
   language and typing questions use typescript-development.
 ---
