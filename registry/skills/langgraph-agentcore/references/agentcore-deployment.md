@@ -60,6 +60,7 @@ from uuid import uuid4
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp, RequestContext
 from langgraph.graph import StateGraph
+from langgraph.types import Command
 from starlette.responses import JSONResponse
 
 app = BedrockAgentCoreApp()
@@ -83,15 +84,23 @@ async def invoke(
     The payload arrives from InvokeAgentRuntime unchanged, so validate it here
     before it reaches the graph. Returning a JSONResponse gives the caller a
     400 instead of the 500 an uncaught KeyError would produce.
+
+    A graph parked on `interrupt()` returns `__interrupt__` to the caller. The
+    caller resumes it by invoking the same session again with `resume` instead
+    of `input`; that value is handed to the graph as `Command(resume=...)` on
+    the same `thread_id`.
     """
+    thread_id = context.session_id or f"session-{uuid4()}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    if "resume" in payload:
+        return await compiled.ainvoke(Command(resume=payload["resume"]), config)
+
     agent_input = payload.get("input")
     if not isinstance(agent_input, dict):
         return JSONResponse(
             {"error": "'input' must be an object"}, status_code=400
         )
-
-    thread_id = context.session_id or f"session-{uuid4()}"
-    config = {"configurable": {"thread_id": thread_id}}
     return await compiled.ainvoke(agent_input, config)
 
 

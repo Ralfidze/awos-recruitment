@@ -13,6 +13,17 @@ that skip a gate.
 > under `references/` and `scripts/`, so these live here rather than in the
 > `evals/evals.json` layout the skill-creator docs describe.
 
+## Contents
+
+- [Eval 1 — Fan-out pipeline with a confidence gate](#eval-1--fan-out-pipeline-with-a-confidence-gate)
+  — `Send`, reducers, `interrupt()` + `Command(resume=...)`
+- [Eval 2 — Deploy an existing graph on AgentCore Runtime](#eval-2--deploy-an-existing-graph-on-agentcore-runtime)
+  — real `bedrock_agentcore` and CDK symbols, `bind_tools`, pinned versions
+- [Eval 3 — Cost-aware model routing with fallback](#eval-3--cost-aware-model-routing-with-fallback)
+  — tier fallback on exhaustion, no silent downgrade, cheap checks first
+- [Eval 4 — Cedar rollout (negative check on repo-local leakage)](#eval-4--cedar-rollout-negative-check-on-repo-local-leakage)
+  — `LOG_ONLY` first, no customer-specific terms
+
 ---
 
 ## Eval 1 — Fan-out pipeline with a confidence gate
