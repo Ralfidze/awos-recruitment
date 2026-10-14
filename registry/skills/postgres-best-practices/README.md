@@ -34,7 +34,7 @@ references/query-missing-indexes.md
 references/conn-pooling.md
 ```
 
-The one-file-per-rule layout mirrors upstream Supabase so the rules can be re-synced with it and read individually without loading a whole category. The trade-off is that reviewing a full category (up to six files) takes one read per file; batch those reads by prefix (for example `references/query-*.md`) rather than merging the files.
+The one-file-per-rule layout mirrors upstream Supabase, so each rule can be read individually without loading a whole category. The files are maintained here and may diverge from upstream (`security-rls-basics.md` already does). The trade-off is that reviewing a full category (the largest category spans several files) takes one read per file; Glob the prefix (for example `references/query-*.md`), then Read the files in one turn rather than merging them.
 
 Every rule file contains:
 - Why the pattern matters
