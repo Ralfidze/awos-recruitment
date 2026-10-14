@@ -17,7 +17,7 @@ version: 0.1.0
 
 Modern best practices for building apps across Apple platforms. Targets Swift 6+ with SwiftUI as the primary UI framework. Covers iOS, iPadOS, macOS, tvOS, watchOS, and visionOS.
 
-For Swift language fundamentals (type system, optionals, error handling, concurrency, protocols, generics, idiomatic patterns), see the `swift-development` skill — install it alongside this one. This skill focuses on platform and framework patterns.
+This skill builds on `swift-development` (Swift language fundamentals, platform-neutral: type system, optionals, error handling, concurrency, protocols, generics, idiomatic patterns). Where both cover the same topic, follow this skill on Apple platforms.
 
 ## Important Rules
 
@@ -25,14 +25,14 @@ For Swift language fundamentals (type system, optionals, error handling, concurr
 - **SwiftUI-first.** Use UIKit/AppKit only when SwiftUI lacks the capability. See `references/uikit-interop.md` for interop patterns.
 - **Respect the existing UI framework.** In legacy UIKit codebases, do not mix SwiftUI and UIKit **lifecycle or navigation** within the same screen (e.g., nesting `UINavigationController` inside `NavigationStack`). Using `UIViewRepresentable` to embed individual UIKit views (maps, web views, text editors) within a SwiftUI screen is expected and supported. New **isolated flows** (full screens or self-contained features) may use SwiftUI, but existing UIKit screens should not be partially rewritten without explicit request. For greenfield projects, use SwiftUI exclusively.
 - **Check the project context.** Before applying patterns, check the deployment target, Swift version, and existing architecture. Adapt recommendations accordingly.
-- **No `#if` / compiler directives for multi-target branching.** Do not use `#if TARGET_NAME` or custom build flags to branch behavior between app targets. Instead, use dependency injection (protocol + per-target conformance) or separate file implementations (one per target, added to the correct target membership in Xcode). `#if` directives are reserved for excluding code from compilation entirely (e.g., `#if DEBUG`, `#if os(iOS)`, `#if canImport(UIKit)`) — not for runtime or build-time polymorphism between targets in the same project.
+- **No `#if` / compiler directives for multi-target branching.** Do not use `#if TARGET_NAME` or custom build flags to branch behavior between app targets in the same Xcode project. Use dependency injection (protocol + per-target conformance) or separate file implementations (one per target, added to the correct target membership in Xcode). The language-level rule — `#if` only for conditions such as `DEBUG`, `os()`, `canImport()` — lives in `swift-development`.
 - **Always localize user-facing text.** Never use explicit string literals for user-facing text (e.g., `"Welcome back"`, `Text("Sign in")`). Always use whichever localization solution is already in use in the project (e.g., String Catalogs, `.strings` files, a custom localization layer). Do not migrate to a different solution unless explicitly asked. When you encounter an existing explicit string that should be localized, flag it and suggest the appropriate key name and parameter names, but do not migrate it unless asked. See `references/localization.md` for String Catalog patterns and named parameter format.
 - **Samples are not templates for literals.** Code samples in this skill and its reference files use literal strings (`Text("Total")`) and raw numeric values (`spacing: 12`) for brevity. When generating real code, apply the localization rule above and the design-token rule in Code Style instead of copying those literals.
 
 ## Reference Files
 
 - **`references/swiftui-patterns.md`** — View composition, property wrappers (`@State`, `@Binding`, `@Observable`), navigation, state management, lists, forms, custom modifiers
-- **`references/concurrency.md`** — Swift concurrency on Apple platforms: async/await and typed throws, structured concurrency, actors, Sendable, task management and `.task`, `@MainActor` in practice, AsyncSequence/AsyncStream, GCD and Combine migration, Swift 6.2 approachable concurrency, pitfalls, testing async code (overlaps with the `swift-development` concurrency reference)
+- **`references/concurrency.md`** — Swift concurrency on Apple platforms: async/await and typed throws, structured concurrency, actors, Sendable, task management and `.task`, `@MainActor` in practice, AsyncSequence/AsyncStream, GCD and Combine migration, Swift 6.2 approachable concurrency, pitfalls, testing async code
 - **`references/uikit-interop.md`** — `UIViewRepresentable`, `UIViewControllerRepresentable`, hosting SwiftUI in UIKit, migration strategies
 - **`references/project-structure.md`** — Xcode project organization, SPM packages, multi-module architecture, build configurations, targets, schemes
 - **`references/persistence.md`** — Core Data (NSPersistentContainer, contexts, migrations, batch ops, CloudKit) and SwiftData (@Model, @Query, ModelActor, VersionedSchema, #Unique, #Index)
@@ -178,7 +178,7 @@ For navigation, lists, forms, custom modifiers, and advanced patterns see `refer
 
 ## Apple Concurrency Patterns
 
-For Swift concurrency fundamentals (async/await, actors, TaskGroup, Sendable), the `swift-development` skill is the primary source; this skill's `references/concurrency.md` restates them with Apple-platform framing and adds `@MainActor` practice, `.task`, Combine-in-SwiftUI, and Swift 6.2 defaults. Below are Apple platform-specific patterns.
+For Swift concurrency fundamentals (async/await, actors, TaskGroup, Sendable), see the `swift-development` skill. Below are Apple platform-specific patterns.
 
 ```swift
 // @MainActor for UI-updating code

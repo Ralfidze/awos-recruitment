@@ -1068,37 +1068,28 @@ Actors are reentrant — when an actor method hits an `await`, other callers can
 ```swift
 actor BankAccount {
     var balance: Decimal
+    let ledger: Ledger
 
     // Bug: the check and the mutation are separated by an `await`. While this call
     // is suspended, another `withdraw` can run on the actor and pass the same check.
     func withdrawUnsafe(_ amount: Decimal) async throws {
         guard balance >= amount else { throw BankError.insufficientFunds }
-        try await processWithBank(amount) // Suspension point — other callers run here
+        await ledger.record(.withdrawal(amount)) // Suspension point — other callers run here
         balance -= amount // May overdraw: balance was checked before the suspension
     }
 
-    // Fix: check and mutate synchronously (no `await` in between), then do the
-    // external call. Roll the mutation back if the external call fails.
+    // Fix: check and mutate synchronously (no `await` in between), then suspend.
     func withdraw(_ amount: Decimal) async throws {
         guard balance >= amount else { throw BankError.insufficientFunds }
-        balance -= amount // Reserve the funds before suspending
-        do {
-            try await processWithBank(amount)
-        } catch {
-            balance += amount // Compensate — the bank never processed it
-            throw error
-        }
-    }
-
-    private func processWithBank(_ amount: Decimal) async throws {
-        // Network call to the banking backend
+        balance -= amount // State is consistent before the first suspension point
+        await ledger.record(.withdrawal(amount))
     }
 }
 ```
 
 Rules:
 - Assume actor state may change across any `await` point.
-- Keep the check and the dependent mutation in the same synchronous section — no `await` between them. If the mutation must precede an external call, make it reversible.
+- Keep the check and the dependent mutation in the same synchronous section — no `await` between them.
 - Where a synchronous check-and-mutate is impossible, re-validate conditions after `await` resumes.
 - Minimize the number of `await` calls within actor methods when state consistency matters.
 

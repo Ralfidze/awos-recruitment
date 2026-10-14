@@ -483,14 +483,14 @@ Anchor "SwiftUI can't do X" to the SDK that closed the gap, then check the proje
 
 **Closed in iOS 26:**
 
-- **Rich text editing** -- `TextEditor` binds to `AttributedString` (with `AttributedTextSelection`) and supports formatting, links, and Markdown. Targets below iOS 26 still need `UITextView`.
+- **Rich text editing** -- `TextEditor` binds to `AttributedString` (with `AttributedTextSelection`) and supports styled text with formatting controls. Targets below iOS 26 still need `UITextView`.
 - **Web content** -- `WebView` renders HTML/CSS/JS and pairs with `WebPage` (an `@Observable` class) for navigation control. Targets below iOS 26 still need `WKWebView` via `UIViewRepresentable`.
 
 **Not covered by SwiftUI through the iOS 26 SDK** (verify against newer SDK release notes before relying on this):
 
 - **First responder management** -- `@FocusState` covers common cases but does not support programmatic first responder resignation in all contexts.
 - **Custom input views and input accessory views** -- no SwiftUI API for replacing the keyboard with a custom view.
-- **Fine-grained scroll view control** -- `scrollTargetBehavior` (iOS 17) and `onScrollGeometryChange` (iOS 18) cover snapping and position, but deceleration rate, content inset, and pull-to-refresh internals remain UIKit-level.
+- **Fine-grained scroll view control** -- `scrollTargetBehavior` and `contentMargins` (iOS 17) and `onScrollGeometryChange` (iOS 18) cover snapping, content insets, and position; `refreshable` (iOS 15) covers pull-to-refresh. The deceleration rate has no SwiftUI equivalent.
 - **`UICollectionView` compositional layout** -- SwiftUI `Grid` and `LazyVGrid`/`LazyHGrid` do not match `NSCollectionLayoutSection` with orthogonal scrolling, estimated dimensions, and supplementary views.
 - **Subclassing views or view controllers** for advanced lifecycle hooks.
 
