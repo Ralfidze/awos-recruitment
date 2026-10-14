@@ -56,12 +56,27 @@ function vuiBuildFixture() {
     )
     .join("");
 
+  // Three boxes whose tops drift by 0.9px each (0, 0.9, 1.8). The spread is
+  // 1.8px, so at the default tolerance of 1 they are neither one row nor two
+  // stacked lines; the only honest answer is "unknown".
+  const driftItems = [0, 100, 200]
+    .map(
+      (left, i) =>
+        `<div class="vui-drift-item" style="position:absolute;left:${left}px;top:0;` +
+        `width:80px;height:40px;transform:translateY(${(i * 0.9).toFixed(1)}px);">` +
+        `Drift ${i + 1}</div>`,
+    )
+    .join("");
+
   // Overflow case: a box hanging 100px past the right edge of the viewport.
   const overflowLeft = window.innerWidth - 100;
 
   host.innerHTML = `
     <div id="vui-row" style="position:absolute;top:10px;left:10px;width:300px;height:40px;">
       ${rowItems}
+    </div>
+    <div id="vui-drift" style="position:absolute;top:10px;left:320px;width:300px;height:40px;">
+      ${driftItems}
     </div>
 
     <button id="vui-btn-plain" style="position:absolute;top:70px;left:10px;width:120px;height:30px;">
@@ -138,13 +153,38 @@ async function runSelfTest() {
     );
 
     // tolerance: 0 restores strict float equality, which is what made the
-    // same row unreadable before the tolerance option existed. If this ever
-    // starts reporting "row", the tolerance is no longer doing anything.
+    // same row unreadable before the tolerance option existed. The drifted
+    // item must not be reported as a second line either: the answer is
+    // "unknown", which tells the caller to re-run with a larger tolerance.
     const strict = checkAlignment({ containerSelector: "#vui-row", tolerance: 0 });
     expect(
       "alignment: tolerance 0 is strict again",
-      strict.behavior !== "row",
+      strict.behavior === "unknown",
       `behavior=${strict.behavior}`,
+    );
+
+    // Drift larger than the tolerance but smaller than the boxes: not a row,
+    // and not two lines either (the "lines" would overlap).
+    const drift = checkAlignment({ containerSelector: "#vui-drift" });
+    expect(
+      "alignment: 1.8px of drift at tolerance 1 is unknown, not two lines",
+      drift.behavior === "unknown",
+      `behavior=${drift.behavior} lines=${drift.lines && drift.lines.length}`,
+    );
+    const driftLoose = checkAlignment({ containerSelector: "#vui-drift", tolerance: 2 });
+    expect(
+      "alignment: the same drift at tolerance 2 is a row",
+      driftLoose.behavior === "row",
+      `behavior=${driftLoose.behavior}`,
+    );
+
+    // Bad tolerance values are reported, not silently misused.
+    const badTolerance = checkAlignment({ containerSelector: "#vui-row", tolerance: "abc" });
+    const negativeTolerance = checkAlignment({ containerSelector: "#vui-row", tolerance: -1 });
+    expect(
+      "alignment: a non-numeric or negative tolerance returns an error",
+      typeof badTolerance.error === "string" && typeof negativeTolerance.error === "string",
+      `error=${badTolerance.error} / ${negativeTolerance.error}`,
     );
 
     // --- Clickability -----------------------------------------------------
@@ -179,7 +219,7 @@ async function runSelfTest() {
     );
     expect(
       "overflow: the scan depth is reported",
-      overflow.maxDepth === 5,
+      overflow.maxDepth === 6,
       `maxDepth=${overflow.maxDepth}`,
     );
 

@@ -94,7 +94,8 @@ Options:
 
 A `behavior: "unknown"` result reports the `tolerance` it used — before calling
 the layout broken, re-run with a larger one to see whether the elements were
-merely a fraction of a pixel apart.
+merely a fraction of a pixel apart. A `tolerance` that is not a non-negative
+number returns `{ error }` instead of a result.
 
 ### Clickability checks  
 1. Read: `Read ${CLAUDE_SKILL_DIR}/scripts/check-clickable.js`
@@ -148,16 +149,13 @@ Options:
 - `checkFooter`: check if the last visible child is clipped (default: true)
 - `checkInteractive`: hit-test all interactive elements for reachability (default: true)
 - `margin`: pixel tolerance for overflow detection (default: 0)
-- `maxDepth`: how many levels down to look for clipped descendants (default: 5).
-  Five levels reaches the panels, sections, and controls a user can see; raise
+- `maxDepth`: how many levels down to look for clipped descendants (default: 6).
+  Six levels reaches the panels, sections, and controls a user can see; raise
   it only when the tree under test is genuinely deeper.
 
 ### How to inject scripts
 Scripts live on disk, NOT accessible from the browser. To inject:
 1. Use the Read tool: `Read ${CLAUDE_SKILL_DIR}/scripts/check-alignment.js`
-   `${CLAUDE_SKILL_DIR}` expands to this skill's own directory, so the path
-   resolves wherever the skill is installed and whatever the current working
-   directory is. Write it exactly like that — do not substitute a literal path.
 2. The file content is now in YOUR context (not the browser's)
 3. Inject via `page.evaluate(<fileContent as a JSON string literal>)` — this defines
    the function in browser scope. Build the literal with JSON.stringify of the
@@ -204,4 +202,3 @@ Write custom `page.evaluate` code only once the scripts above have been tried an
 - Skill does not test cross-browser behavior and uses only Playwright Chromium browser
 - Skill does not verify accessibility features use different skill for that
 - Skill avoids using screenshots and fallbacks to them only in case of low confidence after usage of tools
-</content>

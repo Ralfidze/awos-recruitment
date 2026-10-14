@@ -32,7 +32,15 @@ function checkAlignment({
   // position. Raise it (2-3) for layouts scaled by a transform; lower it to 0
   // only to assert exact pixel equality.
   const DEFAULT_TOLERANCE_PX = 1;
-  const tolerance = toleranceOption ?? DEFAULT_TOLERANCE_PX;
+  const tolerance =
+    toleranceOption === undefined || toleranceOption === null
+      ? DEFAULT_TOLERANCE_PX
+      : Number(toleranceOption);
+  if (Number.isNaN(tolerance) || tolerance < 0) {
+    return {
+      error: `tolerance must be a non-negative number, got ${JSON.stringify(toleranceOption)}`,
+    };
+  }
 
   // --- Resolve scope ---
   const scopeEl = scopeSelector
@@ -123,6 +131,24 @@ function checkAlignment({
     return groups;
   };
 
+  // True when consecutive groups (already sorted along `axis`) do not
+  // intersect: each one starts at or after the previous one ends. Touching
+  // groups (a 0.5px overlap from rounding) still count as separate.
+  const linesAreStacked = (groups, axis) => {
+    for (let i = 1; i < groups.length; i++) {
+      const prevEnd =
+        axis === "y"
+          ? Math.max(...groups[i - 1].map((j) => rects[j].bottom))
+          : Math.max(...groups[i - 1].map((j) => rects[j].right));
+      const currStart =
+        axis === "y"
+          ? Math.min(...groups[i].map((j) => rects[j].top))
+          : Math.min(...groups[i].map((j) => rects[j].left));
+      if (currStart < prevEnd - tolerance) return false;
+    }
+    return true;
+  };
+
   const edgeLabel = (edge) => (edge.includes("center") ? edge : `${edge}-aligned`);
 
   const Y_EDGES = ["top", "bottom", "center-y"];
@@ -155,12 +181,17 @@ function checkAlignment({
   // --- Gap calculation ---
   // Every gap list reports the same way: the raw floats decide uniformity, so
   // a 0.4px difference between two gaps doesn't read as two different gaps,
-  // while the reported values stay rounded to whole pixels.
+  // while the reported values stay rounded to whole pixels. `values` lists
+  // each gap rounded; `value` (uniform gaps only) is the rounded mean, so it
+  // represents all of them rather than whichever gap happened to come first.
   const describeGaps = (vals) => {
     if (vals.length === 0) return { uniform: true, values: [] };
     const uniform = spread(vals) <= tolerance;
     const result = { uniform, values: vals.map((v) => `${Math.round(v)}px`) };
-    if (uniform) result.value = `${Math.round(vals[0])}px`;
+    if (uniform) {
+      const mean = vals.reduce((sum, v) => sum + v, 0) / vals.length;
+      result.value = `${Math.round(mean)}px`;
+    }
     return result;
   };
 
@@ -298,6 +329,18 @@ function checkAlignment({
       rows.sort((a, b) => rects[a[0]].top - rects[b[0]].top);
       for (const row of rows) row.sort((a, b) => rects[a].left - rects[b].left);
 
+      // Wrapped lines sit one below the other. If two "lines" overlap
+      // vertically, the grouping only split one line on sub-tolerance drift
+      // (tops of 0, 0.9 and 1.8px at tolerance 1), and reporting them as two
+      // lines would be false. Leave it unmatched so the result is "unknown"
+      // and the caller re-runs with a larger tolerance.
+      if (!linesAreStacked(rows, "y")) continue;
+
+      // Wrapping means at least one line holds more than one element. A set
+      // of single-element "lines" is a column whose alignment check failed,
+      // not a wrap, so it is not this behaviour either.
+      if (!rows.some((row) => row.length > 1)) continue;
+
       // Find reference gap from first multi-element row
       let refGap = 0;
       for (const row of rows) {
@@ -361,6 +404,12 @@ function checkAlignment({
       cols.sort((a, b) => rects[a[0]].left - rects[b[0]].left);
       for (const col of cols) col.sort((a, b) => rects[a].top - rects[b].top);
 
+      // Same rules as tryLine, on the x axis: columns must not overlap, and
+      // at least one column must hold more than one element (single-element
+      // columns are a row whose alignment check failed, not a wrap).
+      if (!linesAreStacked(cols, "x")) continue;
+      if (!cols.some((col) => col.length > 1)) continue;
+
       // Find reference gap from first multi-element column
       let refGap = 0;
       for (const col of cols) {
@@ -418,18 +467,8 @@ function checkAlignment({
 
       rows.sort((a, b) => rects[a[0]].top - rects[b[0]].top);
 
-      // Rows must not intersect vertically. Touching rows (a 0.5px overlap
-      // from rounding) still count as separate rows.
-      let valid = true;
-      for (let i = 1; i < rows.length; i++) {
-        const prevBottom = Math.max(...rows[i - 1].map((j) => rects[j].bottom));
-        const currTop = Math.min(...rows[i].map((j) => rects[j].top));
-        if (currTop < prevBottom - tolerance) {
-          valid = false;
-          break;
-        }
-      }
-      if (!valid) continue;
+      // Rows must not intersect vertically.
+      if (!linesAreStacked(rows, "y")) continue;
 
       for (const row of rows) row.sort((a, b) => rects[a].left - rects[b].left);
 

@@ -17,16 +17,16 @@
 //   checkFooter      flag the last visible child if it is clipped (default true)
 //   checkInteractive hit-test interactive descendants for reachability (default true)
 //   margin           px of slack before an edge counts as overflowing (default 0)
-//   maxDepth         how deep to scan for clipped descendants (default 5)
+//   maxDepth         how deep to scan for clipped descendants (default 6)
 
 function checkOverflow({ scope, checkFooter, checkInteractive, margin, maxDepth } = {}) {
   // Clipping is a layout failure, and layout failures surface on the boxes a
-  // user can see: the panel, its sections, and the controls inside them. Five
+  // user can see: the panel, its sections, and the controls inside them. Six
   // levels reaches those in the component libraries this skill is used
   // against, while stopping short of the wrapper-in-wrapper depths where a
   // "clipped" span of text is just its parent being reported twice. Raise it
   // when a genuinely deeper tree is under test.
-  const DEFAULT_SCAN_DEPTH = 5;
+  const DEFAULT_SCAN_DEPTH = 6;
   const scanDepth = maxDepth ?? DEFAULT_SCAN_DEPTH;
 
   if (!scope) {
