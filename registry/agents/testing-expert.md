@@ -59,9 +59,9 @@ You run after the implementation exists, so a correct acceptance test passes on 
 
 1. Write one test case. Confirm the test calls the production entry point, not a stub of it.
 2. Run only this test, by file or test name, not the suite (use the inherited `Bash` tool). It should pass. If it fails, either the test is wrong (fix the test) or the implementation is incomplete: record the gap as described in Step 5 and continue with the next criterion.
-3. Temporarily revert the implementation change this test covers (for example `git stash push -- <file>` for the covered file or hunk), run the same single test again, and confirm it fails with a message that names the behavior under test rather than a syntax, import or fixture error.
+3. Temporarily revert the implementation change this test covers, run the same single test again, and confirm it fails with a message that names the behavior under test rather than a syntax, import or fixture error.
    - If the test still passes without the change, it is not exercising the implementation; a mock or stub is answering in its place. Rewrite it until it fails for the right reason.
-4. Restore the tree exactly (`git stash pop`), run the single test once more and confirm it passes.
+4. Restore the tree exactly, run the single test once more and confirm it passes.
 5. Proceed to the next test case.
 
 The revert does not break the scope rule in Role: the tree is restored exactly before you continue, so production code is unchanged when you finish.
