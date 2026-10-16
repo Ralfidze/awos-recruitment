@@ -172,3 +172,22 @@ async def test_check_skill_updates_tool(mock_track, registry, monkeypatch):
     assert data["removed"] == [{"name": "old", "replacement": "fresh"}]
     assert data["command"] == "npx @provectusinc/awos-recruitment skill update"
     assert mock_track.call_args_list[0].args[2]["source"] == "mcp"
+
+
+# ---------------------------------------------------------------------------
+# Server instructions nudge connected sessions to check for updates
+# ---------------------------------------------------------------------------
+
+
+async def test_server_instructions_offer_the_update_check():
+    async with Client(server_module.mcp) as client:
+        info = client.server_info if hasattr(client, "server_info") else None
+        instructions = (
+            info.instructions if info is not None and hasattr(info, "instructions")
+            else server_module.mcp.instructions
+        )
+
+    assert "skill status" in instructions
+    assert "once per session" in instructions
+    assert "do not run it without asking" in instructions
+    assert "check_skill_updates" in instructions
