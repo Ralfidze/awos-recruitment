@@ -17,6 +17,7 @@ from starlette.responses import JSONResponse, Response
 
 from awos_recruitment_mcp.config import Config
 from awos_recruitment_mcp.models.bundle import BundleRequest
+from awos_recruitment_mcp.models.check import CheckRequest
 from awos_recruitment_mcp.models.telemetry import TelemetryRequest
 from awos_recruitment_mcp.telemetry import (
     init_telemetry,
@@ -37,6 +38,7 @@ from awos_recruitment_mcp.registry_index import (
     iter_skill_files,
 )
 from awos_recruitment_mcp.search_index import build_index
+from awos_recruitment_mcp.update_check import check_skills
 from awos_recruitment_mcp.validate import _ALLOWED_HOOK_SCRIPT_EXTENSIONS
 
 config = Config.from_env()
@@ -91,6 +93,41 @@ async def registry_index(request: Request) -> JSONResponse:
     except RemovedFileError as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
     return JSONResponse(index, status_code=200)
+
+
+@mcp.custom_route("/check", methods=["POST"])
+async def check_updates(request: Request) -> Response:
+    """Compare a project's lock file with the registry.
+
+    The ``skill-update-check`` hook POSTs ``.claude/awos-recruitment.lock.json``
+    as is.  With ``Accept: text/plain`` the body is the one-line summary
+    (empty when everything is current); otherwise a JSON document with
+    ``summary``, ``outdated``, ``removed``, ``unknown``, ``up_to_date`` and
+    ``command``.  Returns 400 when the body is not a lock file.
+    """
+    try:
+        body = await request.json()
+        check_request = CheckRequest.model_validate(body)
+    except (ValidationError, ValueError) as exc:
+        detail = exc.errors() if isinstance(exc, ValidationError) else str(exc)
+        return JSONResponse({"error": "Validation failed", "detail": detail}, status_code=400)
+
+    try:
+        index = build_registry_index(config.registry_path)
+    except RemovedFileError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+    installed = {name: entry.hash for name, entry in check_request.skills.items()}
+    result = check_skills(installed, index)
+
+    if check_request.project_id is not None:
+        from awos_recruitment_mcp.tools.update_check import _track
+
+        _track(check_request.project_id, result, source="hook")
+
+    if "text/plain" in request.headers.get("accept", ""):
+        return Response(content=result.summary, media_type="text/plain")
+    return JSONResponse(result.to_dict(), status_code=200)
 
 
 @mcp.custom_route("/telemetry", methods=["POST"])
@@ -304,3 +341,4 @@ async def bundle_hooks(request: Request) -> Response:
 # Import tool modules AFTER `mcp` is created so they can reference it without
 # triggering a circular-import error.
 import awos_recruitment_mcp.tools.search  # noqa: E402, F401 — registers MCP tools
+import awos_recruitment_mcp.tools.update_check  # noqa: E402, F401 — registers MCP tools

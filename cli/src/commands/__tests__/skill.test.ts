@@ -248,4 +248,45 @@ describe("installSkills", () => {
     );
     expect(process.exit).toHaveBeenCalledWith(1);
   });
+
+  // -----------------------------------------------------------------------
+  // 6. Hook tip
+  // -----------------------------------------------------------------------
+  it("prints the update-check tip once, on the first install only", async () => {
+    // installSkills deletes the bundle dir, so each call needs its own.
+    const makeBundle = (name: string): string => {
+      const dir = makeTempDir("bundle-");
+      fs.mkdirSync(path.join(dir, name), { recursive: true });
+      fs.writeFileSync(path.join(dir, name, "SKILL.md"), name, "utf-8");
+      return dir;
+    };
+    const fakeCwd = makeTempDir("cwd-");
+    vi.spyOn(process, "cwd").mockReturnValue(fakeCwd);
+    const tip = expect.stringContaining("hook skill-update-check");
+
+    mockDownloadBundle.mockResolvedValue(makeBundle("a"));
+    await installSkills(["a"]);
+    expect(process.stdout.write).toHaveBeenCalledWith(tip);
+
+    vi.mocked(process.stdout.write).mockClear();
+    mockDownloadBundle.mockResolvedValue(makeBundle("b"));
+    await installSkills(["b"]);
+    expect(process.stdout.write).not.toHaveBeenCalledWith(tip);
+  });
+
+  it("does not print the tip when the hook is already installed", async () => {
+    const bundleDir = makeTempDir("bundle-");
+    fs.mkdirSync(path.join(bundleDir, "a"), { recursive: true });
+    fs.writeFileSync(path.join(bundleDir, "a", "SKILL.md"), "a", "utf-8");
+    mockDownloadBundle.mockResolvedValue(bundleDir);
+    const fakeCwd = makeTempDir("cwd-");
+    fs.mkdirSync(path.join(fakeCwd, ".claude", "hooks", "skill-update-check"), { recursive: true });
+    vi.spyOn(process, "cwd").mockReturnValue(fakeCwd);
+
+    await installSkills(["a"]);
+
+    expect(process.stdout.write).not.toHaveBeenCalledWith(
+      expect.stringContaining("hook skill-update-check"),
+    );
+  });
 });
