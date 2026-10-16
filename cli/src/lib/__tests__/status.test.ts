@@ -113,6 +113,29 @@ describe("computeSkillStatuses", () => {
     expect(status.state).toBe("no-lock-entry");
   });
 
+  it("resolves a pre-lock copy through the version history", () => {
+    const cwd = makeCwd();
+    const local = writeSkill(cwd, "s", { "SKILL.md": "old" });
+    const index = emptyIndex();
+    index.skills.s = { hash: "newhash", files: {} };
+    const history = {
+      version: 1,
+      generated_at: "x",
+      skills: {
+        s: [
+          { hash: local.hash, from: "2026-03-11", to: "2026-09-24", commit: "a" },
+          { hash: "mid", from: "2026-09-24", to: "2026-10-01", commit: "b" },
+          { hash: "newhash", from: "2026-10-01", to: null, commit: "c" },
+        ],
+      },
+    };
+
+    const [status] = computeSkillStatuses(cwd, null, index, history);
+
+    expect(status.state).toBe("outdated");
+    expect(status.detail).toBe("version from 2026-03-11, 2 versions behind (not in lock file)");
+  });
+
   it("reports removed with the replacement from the tombstone", () => {
     const cwd = makeCwd();
     const local = writeSkill(cwd, "aws-docs", { "SKILL.md": "x" });

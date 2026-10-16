@@ -5,9 +5,9 @@ import * as readline from "node:readline/promises";
 import { downloadBundle } from "../lib/download.js";
 import { CliError } from "../lib/errors.js";
 import { readLock, recordSkillInstalls } from "../lib/lock.js";
-import { fetchRegistryIndex } from "../lib/registry-index.js";
+import { fetchRegistryHistory, fetchRegistryIndex } from "../lib/registry-index.js";
 import { resolveServerUrl } from "../lib/server-url.js";
-import { computeSkillStatuses, type SkillStatus } from "../lib/status.js";
+import { computeSkillStatuses, needsHistory, type SkillStatus } from "../lib/status.js";
 import { sendTelemetry, type ClientEvent } from "../lib/telemetry.js";
 import { processSkills } from "./skill.js";
 import { statusEvents } from "./skill-status.js";
@@ -53,6 +53,10 @@ export async function skillUpdate(
   const lock = readLock(cwd);
   const index = await fetchRegistryIndex(serverUrl);
   let statuses = computeSkillStatuses(cwd, lock, index);
+  if (needsHistory(statuses)) {
+    const history = await fetchRegistryHistory(serverUrl);
+    statuses = computeSkillStatuses(cwd, lock, index, history);
+  }
 
   if (names.length > 0) {
     const known = new Set(statuses.map((s) => s.name));
