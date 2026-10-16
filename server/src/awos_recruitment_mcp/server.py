@@ -68,7 +68,13 @@ mcp = FastMCP(
     instructions=(
         "This server provides AI coding assistants with a discovery engine "
         "for skills, agents, tools, and hooks. Use the search_capabilities "
-        "tool to find capabilities matching a natural language query."
+        "tool to find capabilities matching a natural language query. "
+        "Installed skills are copies that do not update themselves. If the "
+        "project has a .claude/skills/ directory, offer once per session to "
+        "run `npx @provectusinc/awos-recruitment skill status`; do not run it "
+        "without asking and do not repeat the offer. When the project has "
+        "a .claude/awos-recruitment.lock.json, the check_skill_updates tool "
+        "answers the same question from its skills hashes and project_id."
     ),
     lifespan=lifespan,
 )
