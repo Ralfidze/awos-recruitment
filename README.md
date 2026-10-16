@@ -89,7 +89,6 @@ To be told at session start instead of remembering to run `skill status`, instal
 npx @provectusinc/awos-recruitment hook skill-update-check
 ```
 
-Agents and `/awos:hire` can ask the MCP server the same question with the `check_skill_updates` tool, passing the `skills` hashes and `project_id` from the lock file.
 
 ## Documentation
 

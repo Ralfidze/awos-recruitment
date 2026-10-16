@@ -38,7 +38,7 @@ from awos_recruitment_mcp.registry_index import (
     iter_skill_files,
 )
 from awos_recruitment_mcp.search_index import build_index
-from awos_recruitment_mcp.update_check import check_skills
+from awos_recruitment_mcp.update_check import check_skills, track_check
 from awos_recruitment_mcp.validate import _ALLOWED_HOOK_SCRIPT_EXTENSIONS
 
 config = Config.from_env()
@@ -72,9 +72,7 @@ mcp = FastMCP(
         "Installed skills are copies that do not update themselves. If the "
         "project has a .claude/skills/ directory, offer once per session to "
         "run `npx @provectusinc/awos-recruitment skill status`; do not run it "
-        "without asking and do not repeat the offer. When the project has "
-        "a .claude/awos-recruitment.lock.json, the check_skill_updates tool "
-        "answers the same question from its skills hashes and project_id."
+        "without asking and do not repeat the offer."
     ),
     lifespan=lifespan,
 )
@@ -127,9 +125,7 @@ async def check_updates(request: Request) -> Response:
     result = check_skills(installed, index)
 
     if check_request.project_id is not None:
-        from awos_recruitment_mcp.tools.update_check import _track
-
-        _track(check_request.project_id, result, source="hook")
+        track_check(check_request.project_id, result, source="hook")
 
     if "text/plain" in request.headers.get("accept", ""):
         return Response(content=result.summary, media_type="text/plain")
@@ -347,4 +343,3 @@ async def bundle_hooks(request: Request) -> Response:
 # Import tool modules AFTER `mcp` is created so they can reference it without
 # triggering a circular-import error.
 import awos_recruitment_mcp.tools.search  # noqa: E402, F401 — registers MCP tools
-import awos_recruitment_mcp.tools.update_check  # noqa: E402, F401 — registers MCP tools

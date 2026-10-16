@@ -1,15 +1,16 @@
 """Compare installed skill hashes with the registry index.
 
-Shared by ``POST /check`` (called by the ``skill-update-check`` hook with
-the project's lock file) and the ``check_skill_updates`` MCP tool (called
-by ``/awos:hire`` and agents).  Local edits cannot be seen from here: the
-CLI's ``skill status`` compares file by file.
+Used by ``POST /check``, called by the ``skill-update-check`` hook with the
+project's lock file.  Local edits cannot be seen from here: the CLI's
+``skill status`` compares file by file.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+from awos_recruitment_mcp.telemetry import track_client_event
 
 UPDATE_COMMAND = "npx @provectusinc/awos-recruitment skill update"
 
@@ -89,3 +90,28 @@ def check_skills(installed: dict[str, str], index: dict[str, Any]) -> CheckResul
             result.up_to_date += 1
 
     return result
+
+
+def track_check(project_id: str, result: CheckResult, source: str) -> None:
+    """Emit ``capability_update_checked`` and one ``capability_removed_in_use`` per removed skill."""
+    track_client_event(
+        project_id,
+        "capability_update_checked",
+        {
+            "source": source,
+            "total": len(result.outdated) + len(result.removed) + len(result.unknown) + result.up_to_date,
+            "outdated": len(result.outdated),
+            "removed": len(result.removed),
+        },
+    )
+    for removed in result.removed:
+        track_client_event(
+            project_id,
+            "capability_removed_in_use",
+            {
+                "capability_name": str(removed["name"]),
+                "capability_type": "skill",
+                "has_replacement": removed["replacement"] is not None,
+                "source": source,
+            },
+        )
