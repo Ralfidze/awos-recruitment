@@ -42,6 +42,27 @@ class RemovedFileError(ValueError):
     """``removed.yaml`` is present but malformed."""
 
 
+def is_bundled_skill_file(rel_path: str) -> bool:
+    """Whether a path relative to the skill directory ships in the bundle.
+
+    One rule for the tar archive, the index and the git history, so all
+    three hash the same files: ``SKILL.md``; files directly under
+    ``references/``, ``assets/`` and ``scripts/`` (scripts only with an
+    allowed extension); no dotfiles; nothing else.
+    """
+    if rel_path == "SKILL.md":
+        return True
+    parts = rel_path.split("/")
+    if len(parts) != 2 or parts[0] not in _SKILL_SUBDIRS:
+        return False
+    name = parts[1]
+    if name.startswith("."):
+        return False
+    if parts[0] == "scripts" and Path(name).suffix not in _ALLOWED_SCRIPT_EXTENSIONS:
+        return False
+    return True
+
+
 def iter_skill_files(skill_dir: Path) -> list[tuple[str, Path]]:
     """Return ``(relative_path, absolute_path)`` for every file a skill bundle ships.
 
@@ -66,14 +87,9 @@ def iter_skill_files(skill_dir: Path) -> list[tuple[str, Path]]:
         if not subdir.is_dir():
             continue
         for sub_file in sorted(subdir.iterdir()):
-            if not sub_file.is_file() or sub_file.name.startswith("."):
-                continue
-            if (
-                subdir_name == "scripts"
-                and sub_file.suffix not in _ALLOWED_SCRIPT_EXTENSIONS
-            ):
-                continue
-            files.append((f"{subdir_name}/{sub_file.name}", sub_file))
+            rel_path = f"{subdir_name}/{sub_file.name}"
+            if sub_file.is_file() and is_bundled_skill_file(rel_path):
+                files.append((rel_path, sub_file))
 
     files.sort(key=lambda pair: pair[0])
     return files

@@ -1,8 +1,9 @@
 import { readLock } from "../lib/lock.js";
-import { fetchRegistryIndex } from "../lib/registry-index.js";
+import { fetchRegistryHistory, fetchRegistryIndex } from "../lib/registry-index.js";
 import { resolveServerUrl } from "../lib/server-url.js";
 import {
   computeSkillStatuses,
+  needsHistory,
   STATE_LABELS,
   type SkillStatus,
 } from "../lib/status.js";
@@ -23,7 +24,12 @@ export async function skillStatus(options: StatusOptions = {}): Promise<void> {
 
   const lock = readLock(cwd);
   const index = await fetchRegistryIndex(serverUrl);
-  const statuses = computeSkillStatuses(cwd, lock, index);
+  let statuses = computeSkillStatuses(cwd, lock, index);
+  if (needsHistory(statuses)) {
+    // Only projects with pre-lock copies pay for the history download.
+    const history = await fetchRegistryHistory(serverUrl);
+    statuses = computeSkillStatuses(cwd, lock, index, history);
+  }
 
   if (options.json) {
     process.stdout.write(JSON.stringify(statuses, null, 2) + "\n");
