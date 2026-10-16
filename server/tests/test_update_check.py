@@ -1,8 +1,7 @@
-"""Tests for the update check: check_skills, POST /check and the MCP tool."""
+"""Tests for the update check: check_skills, POST /check and the server instructions."""
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -83,7 +82,7 @@ def test_summary_is_empty_when_everything_is_current():
 # ---------------------------------------------------------------------------
 
 
-@patch("awos_recruitment_mcp.tools.update_check.track_client_event")
+@patch("awos_recruitment_mcp.update_check.track_client_event")
 async def test_check_route_returns_json(mock_track, registry, client_factory):
     async with client_factory(registry) as client:
         response = await client.post("/check", json=_lock(registry))
@@ -140,41 +139,6 @@ async def test_check_route_rejects_bad_bodies(registry, client_factory, body):
 
 
 # ---------------------------------------------------------------------------
-# MCP tool
-# ---------------------------------------------------------------------------
-
-
-@patch("awos_recruitment_mcp.tools.update_check.track_client_event")
-async def test_check_skill_updates_tool(mock_track, registry, monkeypatch):
-    import dataclasses
-
-    monkeypatch.setattr(
-        server_module,
-        "config",
-        dataclasses.replace(server_module.config, registry_path=str(registry)),
-    )
-    import awos_recruitment_mcp.tools.update_check as tool_module
-
-    monkeypatch.setattr(tool_module, "config", server_module.config)
-
-    lock = _lock(registry)
-    installed = {name: entry["hash"] for name, entry in lock["skills"].items()}
-
-    async with Client(server_module.mcp) as client:
-        tools = {t.name for t in await client.list_tools()}
-        assert "check_skill_updates" in tools
-        result = await client.call_tool(
-            "check_skill_updates", {"installed": installed, "project_id": PROJECT_ID}
-        )
-
-    data = result.data if hasattr(result, "data") else json.loads(result.content[0].text)
-    assert data["outdated"] == ["stale"]
-    assert data["removed"] == [{"name": "old", "replacement": "fresh"}]
-    assert data["command"] == "npx @provectusinc/awos-recruitment skill update"
-    assert mock_track.call_args_list[0].args[2]["source"] == "mcp"
-
-
-# ---------------------------------------------------------------------------
 # Server instructions nudge connected sessions to check for updates
 # ---------------------------------------------------------------------------
 
@@ -190,4 +154,3 @@ async def test_server_instructions_offer_the_update_check():
     assert "skill status" in instructions
     assert "once per session" in instructions
     assert "do not run it without asking" in instructions
-    assert "check_skill_updates" in instructions
