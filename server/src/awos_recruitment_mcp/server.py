@@ -17,7 +17,13 @@ from starlette.responses import JSONResponse, Response
 
 from awos_recruitment_mcp.config import Config
 from awos_recruitment_mcp.models.bundle import BundleRequest
-from awos_recruitment_mcp.telemetry import init_telemetry, shutdown_telemetry, track_install
+from awos_recruitment_mcp.models.telemetry import TelemetryRequest
+from awos_recruitment_mcp.telemetry import (
+    init_telemetry,
+    shutdown_telemetry,
+    track_client_event,
+    track_install,
+)
 from awos_recruitment_mcp.registry import (
     load_registry,
     resolve_agent_paths,
@@ -85,6 +91,37 @@ async def registry_index(request: Request) -> JSONResponse:
     except RemovedFileError as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
     return JSONResponse(index, status_code=200)
+
+
+@mcp.custom_route("/telemetry", methods=["POST"])
+async def client_telemetry(request: Request) -> Response:
+    """Accept update-related events from the CLI.
+
+    The CLI reports ``capability_update_checked``, ``capability_updated``
+    and ``capability_removed_in_use`` after ``skill status`` / ``skill
+    update``.  Events are keyed by the project's random id only.
+
+    Returns 204 on success, 400 when the body fails validation.
+    """
+    try:
+        body = await request.json()
+        telemetry_request = TelemetryRequest.model_validate(body)
+    except (ValidationError, ValueError) as exc:
+        detail = exc.errors() if isinstance(exc, ValidationError) else str(exc)
+        return JSONResponse(
+            {"error": "Validation failed", "detail": detail},
+            status_code=400,
+        )
+
+    for event in telemetry_request.events:
+        properties: dict[str, int | bool | str] = dict(event.properties)
+        if event.capability_name is not None:
+            properties["capability_name"] = event.capability_name
+        if event.capability_type is not None:
+            properties["capability_type"] = event.capability_type
+        track_client_event(telemetry_request.project_id, event.event, properties)
+
+    return Response(status_code=204)
 
 
 @mcp.custom_route("/bundle/skills", methods=["POST"])
