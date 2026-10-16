@@ -4,17 +4,21 @@ import * as path from "node:path";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 
 import { hashDirectory, readLock, writeLock } from "../../lib/lock.js";
-import type { RegistryIndex } from "../../lib/registry-index.js";
+import type { RegistryHistory, RegistryIndex } from "../../lib/registry-index.js";
 import { BACKUP_DIR_RELATIVE, skillUpdate } from "../skill-update.js";
 
-const { mockDownloadBundle, mockFetchIndex, mockSendTelemetry } = vi.hoisted(() => ({
+const { mockDownloadBundle, mockFetchIndex, mockFetchHistory, mockSendTelemetry } = vi.hoisted(() => ({
   mockDownloadBundle: vi.fn<(url: string, names: string[]) => Promise<string>>(),
   mockFetchIndex: vi.fn<(url: string) => Promise<RegistryIndex>>(),
+  mockFetchHistory: vi.fn<(url: string) => Promise<RegistryHistory>>(),
   mockSendTelemetry: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../lib/download.js", () => ({ downloadBundle: mockDownloadBundle }));
-vi.mock("../../lib/registry-index.js", () => ({ fetchRegistryIndex: mockFetchIndex }));
+vi.mock("../../lib/registry-index.js", () => ({
+  fetchRegistryIndex: mockFetchIndex,
+  fetchRegistryHistory: mockFetchHistory,
+}));
 vi.mock("../../lib/telemetry.js", () => ({ sendTelemetry: mockSendTelemetry }));
 
 const tempDirs: string[] = [];
@@ -155,6 +159,48 @@ describe("skillUpdate", () => {
     expect(mockDownloadBundle).not.toHaveBeenCalled();
     expect(readLock(cwd)?.skills.s.hash).toBe(index.skills.s.hash);
     expect(process.stdout.write).toHaveBeenCalledWith("Recorded 's' (already current).\n");
+  });
+
+  it("replaces a pre-lock copy that matches a historical version without asking", async () => {
+    const cwd = makeTempDir("cwd-");
+    const oldDir = writeSkill(path.join(cwd, ".claude", "skills"), "s", "v1");
+    const oldHash = hashDirectory(oldDir).hash;
+    const bundle = makeTempDir("bundle-");
+    const newDir = writeSkill(bundle, "s", "v2");
+    const index: RegistryIndex = {
+      version: 1,
+      generated_at: "",
+      skills: { s: hashDirectory(newDir) },
+      removed: { skills: {}, agents: {}, hooks: {}, mcp: {} },
+    };
+    vi.spyOn(process, "cwd").mockReturnValue(cwd);
+    mockFetchIndex.mockResolvedValue(index);
+    mockFetchHistory.mockResolvedValue({
+      version: 1,
+      generated_at: "x",
+      skills: {
+        s: [
+          { hash: oldHash, from: "2026-03-11", to: "2026-09-24", commit: "a" },
+          { hash: index.skills.s.hash, from: "2026-09-24", to: null, commit: "b" },
+        ],
+      },
+    });
+    mockDownloadBundle.mockResolvedValue(bundle);
+    Object.defineProperty(process.stdin, "isTTY", { value: false, configurable: true });
+
+    await skillUpdate([]);
+
+    expect(mockFetchHistory).toHaveBeenCalledTimes(1);
+    expect(fs.readFileSync(path.join(cwd, ".claude", "skills", "s", "SKILL.md"), "utf-8")).toBe("v2");
+    expect(readLock(cwd)?.skills.s.hash).toBe(index.skills.s.hash);
+  });
+
+  it("does not download the history when every skill has a lock entry", async () => {
+    setupOutdatedProject();
+
+    await skillUpdate([], { dryRun: true });
+
+    expect(mockFetchHistory).not.toHaveBeenCalled();
   });
 
   it("rejects names that are not installed", async () => {

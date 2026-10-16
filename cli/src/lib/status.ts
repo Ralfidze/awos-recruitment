@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { hashDirectory, type LockFile } from "./lock.js";
-import type { RegistryIndex } from "./registry-index.js";
+import type { RegistryHistory, RegistryIndex } from "./registry-index.js";
 
 export type SkillState =
   | "up-to-date"
@@ -68,6 +68,7 @@ export function computeSkillStatuses(
   cwd: string,
   lock: LockFile | null,
   index: RegistryIndex,
+  history: RegistryHistory | null = null,
 ): SkillStatus[] {
   const names = new Set<string>([
     ...Object.keys(lock?.skills ?? {}),
@@ -141,11 +142,27 @@ export function computeSkillStatuses(
     }
 
     if (lockEntry === null) {
+      // A copy installed before the lock file: a match in the version
+      // history proves it is an unmodified older version.
+      const versions = history?.skills[name] ?? [];
+      const position = versions.findIndex((v) => v.hash === local.hash);
+      if (position >= 0) {
+        const behind = versions.length - 1 - position;
+        statuses.push({
+          ...base,
+          state: "outdated",
+          detail: `version from ${versions[position].from}, ${behind} version${behind === 1 ? "" : "s"} behind (not in lock file)`,
+          registryChanged: true,
+        });
+        continue;
+      }
       statuses.push({
         ...base,
         state: "no-lock-entry",
         detail:
-          "installed before the lock file; differs from the registry. Reinstall with `skill <name> --force` to adopt the registry version",
+          history === null
+            ? "installed before the lock file; differs from the registry"
+            : "installed before the lock file; matches no registry version, so it has local changes. Reinstall with `skill <name> --force` to take the registry version",
       });
       continue;
     }
@@ -176,4 +193,9 @@ export function computeSkillStatuses(
   }
 
   return statuses;
+}
+
+/** True when a status could be resolved by the version history. */
+export function needsHistory(statuses: SkillStatus[]): boolean {
+  return statuses.some((s) => s.state === "no-lock-entry");
 }
