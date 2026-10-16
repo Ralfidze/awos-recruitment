@@ -15,7 +15,11 @@ from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+import json
+from pathlib import Path
+
 from awos_recruitment_mcp.config import Config
+from awos_recruitment_mcp.history import HISTORY_FILE, empty_history
 from awos_recruitment_mcp.models.bundle import BundleRequest
 from awos_recruitment_mcp.models.check import CheckRequest
 from awos_recruitment_mcp.models.telemetry import TelemetryRequest
@@ -97,6 +101,25 @@ async def registry_index(request: Request) -> JSONResponse:
     except RemovedFileError as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
     return JSONResponse(index, status_code=200)
+
+
+@mcp.custom_route("/history.json", methods=["GET"])
+async def registry_history(request: Request) -> JSONResponse:
+    """Return every past version of every skill (hash, dates, commit).
+
+    Generated from git at deploy time into ``<registry>/history.json`` by
+    ``python -m awos_recruitment_mcp.history``.  The CLI uses it to
+    fingerprint copies installed before the lock file existed.  Serves an
+    empty document when the file is absent (local dev).
+    """
+    history_file = Path(config.registry_path) / HISTORY_FILE
+    if not history_file.is_file():
+        return JSONResponse(empty_history(), status_code=200)
+    try:
+        with open(history_file, encoding="utf-8") as fh:
+            return JSONResponse(json.load(fh), status_code=200)
+    except (OSError, ValueError) as exc:
+        return JSONResponse({"error": f"{HISTORY_FILE}: {exc}"}, status_code=500)
 
 
 @mcp.custom_route("/check", methods=["POST"])

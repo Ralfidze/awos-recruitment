@@ -41,3 +41,38 @@ export async function fetchRegistryIndex(serverUrl: string): Promise<RegistryInd
     },
   };
 }
+
+/** One past version of a skill (see server `history.py`). */
+export interface HistoryVersion {
+  hash: string;
+  from: string;
+  to: string | null;
+  commit: string;
+}
+
+/** Shape of `GET /history.json`. */
+export interface RegistryHistory {
+  version: number;
+  generated_at: string | null;
+  skills: Record<string, HistoryVersion[]>;
+}
+
+/** Fetches every past version of every skill. Empty when the server has no history file. */
+export async function fetchRegistryHistory(serverUrl: string): Promise<RegistryHistory> {
+  const url = `${serverUrl}/history.json`;
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch {
+    throw new NetworkError(`Error: could not connect to AWOS server at ${url}.`);
+  }
+  if (response.status !== 200) {
+    throw new CliError(`Error: server returned status ${response.status} for ${url}.`);
+  }
+  const body = (await response.json()) as Partial<RegistryHistory>;
+  return {
+    version: body.version ?? 1,
+    generated_at: body.generated_at ?? null,
+    skills: body.skills ?? {},
+  };
+}

@@ -73,7 +73,9 @@ npx @provectusinc/awos-recruitment skill update react-best-practices
 npx @provectusinc/awos-recruitment skill modern-python-development --force
 ```
 
-`skill status` prints one of: `up to date`, `outdated`, `modified locally`, `removed from registry` (with the replacement), `no lock entry` (installed before the lock file and different from the registry), `not in registry`, `missing locally`. Add `--json` for scripts.
+`skill status` prints one of: `up to date`, `outdated`, `modified locally`, `removed from registry` (with the replacement), `no lock entry`, `not in registry`, `missing locally`. Add `--json` for scripts.
+
+Skills installed before the lock file existed are matched against the registry's version history (`GET /history.json`, generated from git at deploy time). A copy that equals a past version shows as `outdated` with the date of that version and `skill update` replaces it; a copy that matches no version shows as `no lock entry`, because it has local changes.
 
 `skill update` replaces outdated skills and records them in the lock file. A skill you changed locally is not overwritten silently:
 
