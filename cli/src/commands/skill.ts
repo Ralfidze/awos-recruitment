@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { downloadBundle } from "../lib/download.js";
-import { recordSkillInstalls } from "../lib/lock.js";
+import { readLock, recordSkillInstalls } from "../lib/lock.js";
 import { resolveServerUrl } from "../lib/server-url.js";
 import type { InstallResult } from "../lib/types.js";
 
@@ -32,9 +32,13 @@ export async function installSkills(
   );
 
   try {
+    const firstInstall = readLock(process.cwd()) === null;
     const results = processSkills(tempDir, names, options);
     recordSkillInstalls(process.cwd(), installedNames(results), serverUrl);
     printResults(results);
+    if (firstInstall && installedNames(results).length > 0) {
+      printUpdateCheckTip(process.cwd());
+    }
 
     const hasFailures = results.some(
       (r) => r.status !== "installed",
@@ -113,6 +117,20 @@ export function processSkills(
   }
 
   return results;
+}
+
+/**
+ * After the first install in a project, points at the hook that reports
+ * outdated skills at session start — unless it is already installed.
+ */
+function printUpdateCheckTip(cwd: string): void {
+  const hookDir = path.join(cwd, ".claude", "hooks", "skill-update-check");
+  if (fs.existsSync(hookDir)) {
+    return;
+  }
+  process.stdout.write(
+    "\nTip: `npx @provectusinc/awos-recruitment hook skill-update-check` tells you at session start when installed skills are outdated.\n",
+  );
 }
 
 /**

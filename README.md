@@ -83,6 +83,14 @@ npx @provectusinc/awos-recruitment skill modern-python-development --force
 
 Both commands send anonymous counts (project id from the lock file, skill names, outcome) to the server. Set `AWOS_TELEMETRY=0` to turn that off. The server publishes the current hash of every skill and the list of removed ones at `GET /index.json`.
 
+To be told at session start instead of remembering to run `skill status`, install the `skill-update-check` hook. It checks once a day, is silent offline, and prints one line when something is outdated or removed:
+
+```bash
+npx @provectusinc/awos-recruitment hook skill-update-check
+```
+
+Agents and `/awos:hire` can ask the MCP server the same question with the `check_skill_updates` tool, passing the `skills` hashes and `project_id` from the lock file.
+
 ## Documentation
 
 | Document | Description |
