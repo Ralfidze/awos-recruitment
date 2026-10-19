@@ -21,7 +21,7 @@ On every session start the hook reads `.claude/awos-recruitment.lock.json` (writ
 awos-recruitment: 2 skills outdated (pytest-best-practices, react-best-practices). Run `npx @provectusinc/awos-recruitment skill update`.
 ```
 
-When everything is current it prints nothing. It checks at most once a day per project (stamp file under `${XDG_CACHE_HOME:-$HOME/.cache}/awos-recruitment/`), never on every start. It fails open: no lock file, no `curl`, no network, or a server error all end the hook silently with exit 0.
+A project that has skills but no lock file yet (installed before the lock file existed) gets one line that names the skills and says to run `skill status`; no network is used for that. When everything is current it prints nothing. It checks at most once a day per project (stamp file under `${XDG_CACHE_HOME:-$HOME/.cache}/awos-recruitment/`), never on every start. It fails open: no lock file, no `curl`, no network, or a server error all end the hook silently with exit 0.
 
 The message goes to you, not to Claude: the hook prints `{"systemMessage": ...}`, so it does not change what the model does.
 
