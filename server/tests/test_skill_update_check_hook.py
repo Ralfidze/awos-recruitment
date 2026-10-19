@@ -96,9 +96,13 @@ def test_prints_system_message_when_outdated(project, tmp_path):
         server.close()
 
     assert proc.returncode == 0, proc.stderr
-    assert json.loads(proc.stdout) == {
-        "systemMessage": "awos-recruitment: 1 skill outdated (s). Run `x`."
-    }
+    out = json.loads(proc.stdout)
+    assert out["systemMessage"] == "awos-recruitment: 1 skill outdated (s). Run `x`."
+    context = out["hookSpecificOutput"]["additionalContext"]
+    assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
+    assert context.startswith("awos-recruitment: 1 skill outdated (s). Run `x`. In your first reply")
+    assert "offer to run `npx @provectusinc/awos-recruitment skill update`" in context
+    assert "Run it only if the user agrees" in context
     assert server.requests[0]["path"] == "/check"
     assert server.requests[0]["accept"] == "text/plain"
     assert server.requests[0]["body"]["skills"]["s"]["hash"] == "0" * 64
