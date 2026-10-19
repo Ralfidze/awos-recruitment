@@ -59,13 +59,25 @@ def shutdown_telemetry() -> None:
         _client = None
 
 
-def track_search(query: str, results: list[dict]) -> None:
+def track_search(
+    query: str,
+    results: list[dict],
+    type_filter: str | None = None,
+) -> None:
     """Emit a ``capability_searched`` event.
+
+    Besides the query and the result names, the event carries three flat
+    properties for gap analysis: ``result_count``, ``top_score`` (the best
+    similarity score in the list, ``None`` when the list is empty) and
+    ``type_filter``. A zero ``result_count`` is a hard gap; a low
+    ``top_score`` is a weak match the caller may still have rejected.
 
     Args:
         query: The raw search text entered by the user.
         results: The list of result dicts returned by the search index.
-            Each dict is expected to contain a ``"name"`` key.
+            Each dict is expected to contain ``"name"`` and ``"score"`` keys.
+        type_filter: The capability type the search was restricted to, or
+            ``None`` when the search covered every type.
     """
     if _client is None:
         return
@@ -77,6 +89,9 @@ def track_search(query: str, results: list[dict]) -> None:
             properties={
                 "query": query,
                 "results": [r["name"] for r in results],
+                "result_count": len(results),
+                "top_score": max((r["score"] for r in results), default=None),
+                "type_filter": type_filter,
             },
         )
     except Exception:

@@ -53,13 +53,18 @@ def test_track_search_calls_capture(mock_client: MagicMock) -> None:
         properties={
             "query": "Python development",
             "results": ["python-dev", "fastapi"],
+            "result_count": 2,
+            "top_score": 90,
+            "type_filter": None,
         },
     )
 
 
 @patch.object(telemetry, "_client", new_callable=MagicMock)
 def test_track_search_empty_results(mock_client: MagicMock) -> None:
-    """track_search() should handle an empty results list correctly."""
+    """An empty results list is a hard gap: result_count is 0 and
+    top_score is None, so the event stays queryable without JSON parsing.
+    """
     telemetry.track_search("niche query", [])
 
     mock_client.capture.assert_called_once_with(
@@ -68,8 +73,42 @@ def test_track_search_empty_results(mock_client: MagicMock) -> None:
         properties={
             "query": "niche query",
             "results": [],
+            "result_count": 0,
+            "top_score": None,
+            "type_filter": None,
         },
     )
+
+
+@patch.object(telemetry, "_client", new_callable=MagicMock)
+def test_track_search_records_type_filter(mock_client: MagicMock) -> None:
+    """The type filter the search was restricted to is recorded as-is, so
+    hook searches can be separated from skill searches in analysis.
+    """
+    telemetry.track_search("format code after edits", [], type_filter="hook")
+
+    props = mock_client.capture.call_args.kwargs["properties"]
+    assert props["type_filter"] == "hook", (
+        f"type_filter must echo the search restriction, got {props['type_filter']!r}"
+    )
+
+
+@patch.object(telemetry, "_client", new_callable=MagicMock)
+def test_track_search_top_score_is_max_not_first(mock_client: MagicMock) -> None:
+    """top_score is the best score in the list regardless of its order, so
+    a weak match (low top_score) can be told apart from a good one.
+    """
+    results = [
+        {"name": "typescript-pro", "description": "TS", "score": 23},
+        {"name": "python-dev", "description": "Py", "score": 41},
+    ]
+    telemetry.track_search("Python expert", results)
+
+    props = mock_client.capture.call_args.kwargs["properties"]
+    assert props["top_score"] == 41, (
+        f"top_score must be the maximum score in results, got {props['top_score']}"
+    )
+    assert props["result_count"] == 2
 
 
 # ---------------------------------------------------------------------------

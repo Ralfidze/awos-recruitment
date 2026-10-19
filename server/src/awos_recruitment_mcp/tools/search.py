@@ -56,6 +56,6 @@ async def search_capabilities(
         threshold=config.search_threshold,
     )
 
-    track_search(query, results)
+    track_search(query, results, type_filter=type)
 
     return results
