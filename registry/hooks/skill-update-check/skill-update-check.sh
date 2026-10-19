@@ -33,10 +33,14 @@ if [ "$interval" -gt 0 ] 2>/dev/null && [ $((now - last)) -lt "$interval" ]; the
 fi
 mkdir -p "$cache_dir" 2>/dev/null && printf '%s' "$now" > "$stamp" 2>/dev/null
 
-# --- tell the user (not the model) --------------------------------------------
+# --- tell the user AND the model ----------------------------------------------
+# systemMessage is shown to the user at session start. additionalContext goes
+# into the model's context, so the assistant brings it up in its first reply
+# and offers the update; people who skip the banner still get asked.
 say() {
   escaped=$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')
-  printf '{"systemMessage":"%s"}\n' "$escaped"
+  context="$escaped In your first reply, tell the user this in one line and offer to run \`npx @provectusinc/awos-recruitment skill update\` for them (it asks before overwriting local edits and keeps them without a terminal). Run it only if the user agrees. Do not bring it up again."
+  printf '{"systemMessage":"%s","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$escaped" "$context"
   exit 0
 }
 
