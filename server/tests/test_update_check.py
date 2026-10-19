@@ -151,6 +151,5 @@ async def test_server_instructions_offer_the_update_check():
             else server_module.mcp.instructions
         )
 
-    assert "skill status" in instructions
-    assert "once per session" in instructions
-    assert "do not run it without asking" in instructions
+    assert "check_skill_updates" in instructions
+    assert "Never run `skill update` yourself" in instructions

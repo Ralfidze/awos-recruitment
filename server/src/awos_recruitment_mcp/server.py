@@ -73,10 +73,11 @@ mcp = FastMCP(
         "This server provides AI coding assistants with a discovery engine "
         "for skills, agents, tools, and hooks. Use the search_capabilities "
         "tool to find capabilities matching a natural language query. "
-        "Installed skills are copies that do not update themselves. If the "
-        "project has a .claude/skills/ directory, offer once per session to "
-        "run `npx @provectusinc/awos-recruitment skill status`; do not run it "
-        "without asking and do not repeat the offer."
+        "Installed skills are copies that do not update themselves. At the "
+        "start of a session, if the project has a .claude/skills/ directory, "
+        "call the check_skill_updates tool once (see its description for the "
+        "one shell command to run first) and tell the user its summary in one "
+        "line. Never run `skill update` yourself; the user decides."
     ),
     lifespan=lifespan,
 )
@@ -366,3 +367,4 @@ async def bundle_hooks(request: Request) -> Response:
 # Import tool modules AFTER `mcp` is created so they can reference it without
 # triggering a circular-import error.
 import awos_recruitment_mcp.tools.search  # noqa: E402, F401 — registers MCP tools
+import awos_recruitment_mcp.tools.update_check  # noqa: E402, F401 — registers MCP tools
