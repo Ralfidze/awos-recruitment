@@ -1,15 +1,20 @@
 """Compare installed skill hashes with the registry index.
 
-Used by ``POST /check``, called by the ``skill-update-check`` hook with the
-project's lock file.  Local edits cannot be seen from here: the CLI's
-``skill status`` compares file by file.
+Used by ``POST /check`` (the ``skill-update-check`` hook sends the lock
+file) and by the ``check_skill_updates`` MCP tool (the agent sends the
+sha256 of every file under ``.claude/skills/``, so no lock file is needed).
 """
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
+from awos_recruitment_mcp.history import HISTORY_FILE
+from awos_recruitment_mcp.registry_index import combined_hash
 from awos_recruitment_mcp.telemetry import track_client_event
 
 UPDATE_COMMAND = "npx @provectusinc/awos-recruitment skill update"
@@ -115,3 +120,140 @@ def track_check(project_id: str, result: CheckResult, source: str) -> None:
                 "source": source,
             },
         )
+
+
+# ---------------------------------------------------------------------------
+# File-based check (no lock file needed): the agent sends sha256 per file
+# ---------------------------------------------------------------------------
+
+_SHASUM_LINE = re.compile(r"^\s*([0-9a-fA-F]{64})\s+\*?(.+?)\s*$")
+_SKILLS_SEGMENT = ".claude/skills/"
+
+
+def parse_shasum_output(text: str) -> dict[str, dict[str, str]]:
+    """Parse ``shasum -a 256`` / ``sha256sum`` output into ``{skill: {rel path: sha256}}``.
+
+    Lines look like ``<sha256>  <path>``.  Only paths that contain
+    ``.claude/skills/<name>/`` count; everything else is ignored.  Windows
+    separators are accepted.
+    """
+    skills: dict[str, dict[str, str]] = {}
+    for line in text.splitlines():
+        match = _SHASUM_LINE.match(line)
+        if not match:
+            continue
+        digest, path = match.group(1).lower(), match.group(2).replace("\\", "/")
+        idx = path.find(_SKILLS_SEGMENT)
+        if idx < 0:
+            continue
+        rest = path[idx + len(_SKILLS_SEGMENT):]
+        name, _, rel_path = rest.partition("/")
+        if not name or not rel_path:
+            continue
+        skills.setdefault(name, {})[rel_path] = digest
+    return skills
+
+
+def load_history(registry_path: str | Path) -> dict[str, Any]:
+    """Return ``history.json`` from the registry directory, or an empty history."""
+    history_file = Path(registry_path) / HISTORY_FILE
+    if not history_file.is_file():
+        return {"skills": {}}
+    try:
+        with open(history_file, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {"skills": {}}
+
+
+def check_files(
+    skills: dict[str, dict[str, str]],
+    index: dict[str, Any],
+    history: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Classify installed skills from their file hashes.
+
+    Args:
+        skills: ``{skill name: {relative path: sha256}}`` from the project.
+        index: The document ``build_registry_index`` returns.
+        history: The document ``build_history`` returns (may be empty).
+
+    Returns:
+        One dict per skill, sorted by name: ``name``, ``state`` (``up-to-date``,
+        ``outdated``, ``removed``, ``modified-or-unknown``, ``not-in-registry``),
+        ``detail``, ``replacement``.
+    """
+    registry_skills = index.get("skills", {})
+    removed_skills = index.get("removed", {}).get("skills", {})
+    history_skills = history.get("skills", {})
+
+    results: list[dict[str, Any]] = []
+    for name in sorted(skills):
+        local_hash = combined_hash(skills[name])
+        entry: dict[str, Any] = {"name": name, "state": "", "detail": "", "replacement": None}
+
+        if name in removed_skills:
+            replacement = removed_skills[name].get("replacement")
+            entry["state"] = "removed"
+            entry["replacement"] = replacement
+            entry["detail"] = (
+                f"removed {removed_skills[name].get('removed')}; "
+                + (f"install '{replacement}' instead" if replacement else "no replacement")
+            )
+        elif name not in registry_skills:
+            entry["state"] = "not-in-registry"
+            entry["detail"] = "the registry has no skill with this name"
+        elif registry_skills[name]["hash"] == local_hash:
+            entry["state"] = "up-to-date"
+        else:
+            versions = history_skills.get(name, [])
+            position = next((i for i, v in enumerate(versions) if v["hash"] == local_hash), -1)
+            if position >= 0:
+                behind = len(versions) - 1 - position
+                entry["state"] = "outdated"
+                entry["detail"] = (
+                    f"version from {versions[position]['from']}, "
+                    f"{behind} version{'' if behind == 1 else 's'} behind"
+                )
+            else:
+                entry["state"] = "modified-or-unknown"
+                entry["detail"] = (
+                    "differs from every registry version: local edits, or a version "
+                    "the history does not know"
+                )
+        results.append(entry)
+    return results
+
+
+def summarize_files(results: list[dict[str, Any]]) -> str:
+    """One line for the user; empty when nothing needs attention."""
+    outdated = [r["name"] for r in results if r["state"] == "outdated"]
+    removed = [r for r in results if r["state"] == "removed"]
+    modified = [r["name"] for r in results if r["state"] == "modified-or-unknown"]
+    parts: list[str] = []
+    if outdated:
+        parts.append(f"{len(outdated)} skill{'s' if len(outdated) != 1 else ''} outdated ({', '.join(outdated)})")
+    if removed:
+        names = ", ".join(
+            f"{r['name']} -> {r['replacement']}" if r["replacement"] else str(r["name"]) for r in removed
+        )
+        parts.append(f"{len(removed)} removed from registry ({names})")
+    if modified:
+        parts.append(f"{len(modified)} with local edits or unknown version ({', '.join(modified)})")
+    if not parts:
+        return ""
+    return f"awos-recruitment: {'; '.join(parts)}. Run `{UPDATE_COMMAND}`."
+
+
+def result_from_files(results: list[dict[str, Any]]) -> CheckResult:
+    """Fold a file-based check into a :class:`CheckResult` for telemetry."""
+    return CheckResult(
+        outdated=[r["name"] for r in results if r["state"] == "outdated"],
+        removed=[
+            {"name": r["name"], "replacement": r["replacement"]}
+            for r in results
+            if r["state"] == "removed"
+        ],
+        unknown=[r["name"] for r in results if r["state"] in ("not-in-registry", "modified-or-unknown")],
+        up_to_date=sum(1 for r in results if r["state"] == "up-to-date"),
+    )
