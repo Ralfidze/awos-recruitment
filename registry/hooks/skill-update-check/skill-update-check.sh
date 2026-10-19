@@ -1,19 +1,25 @@
 #!/bin/sh
 # skill-update-check — SessionStart hook.
-# Sends .claude/awos-recruitment.lock.json to the registry server and shows
-# one line when installed skills are outdated or removed. Once a day per
-# project. Fails open: every unexpected condition exits 0 without output.
+# With a lock file: sends .claude/awos-recruitment.lock.json to the registry
+# server and shows one line when installed skills are outdated or removed.
+# Without a lock file but with installed skills: shows one line that says
+# to run `skill status` (no network needed). Once a day per project.
+# Fails open: every unexpected condition exits 0 without output.
 
 [ "${AWOS_UPDATE_CHECK:-1}" = "0" ] && exit 0
 
-lock="${CLAUDE_PROJECT_DIR:-.}/.claude/awos-recruitment.lock.json"
-[ -f "$lock" ] || exit 0
-command -v curl >/dev/null 2>&1 || exit 0
-
+project="${CLAUDE_PROJECT_DIR:-.}"
+lock="$project/.claude/awos-recruitment.lock.json"
+skills_dir="$project/.claude/skills"
 server="${AWOS_SERVER_URL:-https://recruitment.awos.provectus.pro}"
 interval="${AWOS_UPDATE_CHECK_INTERVAL:-86400}"
 
-# --- once per interval, keyed by the lock file path -------------------------
+# --- nothing installed: nothing to say ---------------------------------------
+if [ ! -f "$lock" ] && [ ! -d "$skills_dir" ]; then
+  exit 0
+fi
+
+# --- once per interval, keyed by the project path -----------------------------
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/awos-recruitment"
 key=$(printf '%s' "$lock" | cksum | cut -d' ' -f1)
 stamp="$cache_dir/$key.checked"
@@ -27,7 +33,29 @@ if [ "$interval" -gt 0 ] 2>/dev/null && [ $((now - last)) -lt "$interval" ]; the
 fi
 mkdir -p "$cache_dir" 2>/dev/null && printf '%s' "$now" > "$stamp" 2>/dev/null
 
-# --- ask the server ----------------------------------------------------------
+# --- tell the user (not the model) --------------------------------------------
+say() {
+  escaped=$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')
+  printf '{"systemMessage":"%s"}\n' "$escaped"
+  exit 0
+}
+
+# --- no lock file: installed before the lock file existed ---------------------
+if [ ! -f "$lock" ]; then
+  count=0
+  names=""
+  for dir in "$skills_dir"/*/; do
+    [ -d "$dir" ] || continue
+    name=$(basename "$dir")
+    count=$((count + 1))
+    names="${names}${names:+, }${name}"
+  done
+  [ "$count" -gt 0 ] || exit 0
+  say "awos-recruitment: $count skill(s) installed without a lock file ($names). Run \`npx @provectusinc/awos-recruitment skill status\` to check for updates."
+fi
+
+# --- lock file: ask the server -------------------------------------------------
+command -v curl >/dev/null 2>&1 || exit 0
 summary=$(curl -sS --max-time 5 \
   -H 'Content-Type: application/json' \
   -H 'Accept: text/plain' \
@@ -41,7 +69,4 @@ case "$summary" in
   *) exit 0 ;;
 esac
 
-# --- tell the user (not the model) --------------------------------------------
-escaped=$(printf '%s' "$summary" | sed 's/\\/\\\\/g; s/"/\\"/g')
-printf '{"systemMessage":"%s"}\n' "$escaped"
-exit 0
+say "$summary"

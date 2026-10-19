@@ -129,7 +129,7 @@ def test_checks_once_per_interval(project, tmp_path):
     assert len(server.requests) == 1
 
 
-def test_silent_without_lock_file(tmp_path):
+def test_silent_without_lock_file_and_without_skills(tmp_path):
     project = tmp_path / "empty"
     project.mkdir()
     server = _CheckServer("awos-recruitment: would be shown")
@@ -140,6 +140,26 @@ def test_silent_without_lock_file(tmp_path):
 
     assert proc.returncode == 0
     assert proc.stdout == ""
+    assert server.requests == []
+
+
+def test_names_skills_installed_without_a_lock_file(tmp_path):
+    """A pre-lock project gets a local reminder; the server is not called."""
+    project = tmp_path / "old"
+    for name in ("pytest-best-practices", "react-best-practices"):
+        (project / ".claude" / "skills" / name).mkdir(parents=True)
+    server = _CheckServer("awos-recruitment: would be shown")
+    try:
+        proc = run_hook(project, tmp_path / "cache", server.url)
+    finally:
+        server.close()
+
+    assert proc.returncode == 0
+    message = json.loads(proc.stdout)["systemMessage"]
+    assert message.startswith(
+        "awos-recruitment: 2 skill(s) installed without a lock file "
+        "(pytest-best-practices, react-best-practices). Run `npx"
+    )
     assert server.requests == []
 
 
