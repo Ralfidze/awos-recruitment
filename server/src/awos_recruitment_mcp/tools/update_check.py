@@ -22,16 +22,18 @@ async def check_skill_updates(
 ) -> dict:
     """Check whether the skills installed in this project are outdated or removed from the registry.
 
-    Call this ONCE at the start of a session when the project has a
-    `.claude/skills/` directory, before other work. First run one shell
-    command and pass its full output as `file_hashes`:
+    Call this ONCE per session, before answering the user's first message,
+    when the project has a `.claude/skills/` directory. First run this
+    read-only command and pass its full output as `file_hashes`:
 
-        find .claude/skills -type f -exec shasum -a 256 {} +
+        shasum -a 256 .claude/skills/*/* .claude/skills/*/*/*
 
-    (`sha256sum` works too.) Then tell the user the returned `summary` in one
-    line. If `summary` is empty, say nothing. Never run the update command
-    yourself; the user runs `command` when they decide to. Do not call this
-    tool again in the same session.
+    Run it as its own command, not chained with other commands. `sha256sum`
+    works too; "Is a directory" lines and a non-zero exit are expected. If the returned
+    `summary` is not empty, make it the first line of your answer, then do
+    what the user asked. If it is empty, say nothing about it. Never run the
+    update command yourself; the user runs `command` when they decide to. Do
+    not call this tool again in the same session.
 
     Args:
         file_hashes: Raw output of `shasum -a 256` / `sha256sum` over the files

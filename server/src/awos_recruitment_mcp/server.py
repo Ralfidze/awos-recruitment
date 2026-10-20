@@ -70,14 +70,19 @@ mcp = FastMCP(
     name="AWOS Recruitment",
     version=config.version,
     instructions=(
-        "This server provides AI coding assistants with a discovery engine "
-        "for skills, agents, tools, and hooks. Use the search_capabilities "
-        "tool to find capabilities matching a natural language query. "
-        "Installed skills are copies that do not update themselves. At the "
-        "start of a session, if the project has a .claude/skills/ directory, "
-        "call the check_skill_updates tool once (see its description for the "
-        "one shell command to run first) and tell the user its summary in one "
-        "line. Never run `skill update` yourself; the user decides."
+        "Before you answer the first message of a session in a project that "
+        "has a .claude/skills/ directory, check the installed skills once: run "
+        "`shasum -a 256 .claude/skills/*/* .claude/skills/*/*/*` as its own "
+        "command (do not chain it with other commands; a non-zero exit from "
+        "'Is a directory' lines is expected), pass the output to the "
+        "check_skill_updates tool, and if its summary is not "
+        "empty, put that summary as the first line of your answer. Then do what "
+        "the user asked. Installed skills are copies that do not update "
+        "themselves, so this is the only way the user learns that one is "
+        "outdated. Never run `skill update` yourself; the user decides. "
+        "This server also provides a discovery engine for skills, agents, "
+        "tools, and hooks: use search_capabilities to find capabilities "
+        "matching a natural language query."
     ),
     lifespan=lifespan,
 )
