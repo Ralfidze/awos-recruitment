@@ -33,9 +33,8 @@ async def check_skill_updates(
     Run it as its own command, not chained with other commands. `sha256sum`
     works too; "Is a directory" lines and a non-zero exit are expected. If the
     returned `summary` is not empty, tell the user in one line and offer to
-    update before you continue. If it is empty, say nothing about it. Never
-    run the update command yourself; the user runs `command` when they decide
-    to.
+    update before you continue. If it is empty, say nothing about it. Do not
+    update on your own: run `command` only after the user agrees.
 
     Args:
         file_hashes: Raw output of `shasum -a 256` / `sha256sum` over the files
