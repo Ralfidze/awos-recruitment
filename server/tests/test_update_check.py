@@ -153,3 +153,5 @@ async def test_server_instructions_offer_the_update_check():
 
     assert "check_skill_updates" in instructions
     assert "Never run `skill update` yourself" in instructions
+    assert "/awos:tech, /awos:hire or /awos:implement" in instructions
+    assert "Do not check on other messages" in instructions
