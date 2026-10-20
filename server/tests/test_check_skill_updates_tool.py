@@ -133,3 +133,34 @@ async def test_tool_explains_empty_input(registry):
     data = result.data if getattr(result, "data", None) else json.loads(result.content[0].text)
     assert data["skills"] == []
     assert "No `.claude/skills/" in data["note"]
+
+
+@patch("awos_recruitment_mcp.update_check.track_client_event")
+async def test_tool_stays_quiet_about_a_skipped_version(mock_track, registry):
+    """The lock file says the user skipped the current registry version: no summary."""
+    file_hashes = f"{sha('v1' + chr(10))}  .claude/skills/s/SKILL.md\n"
+    current = hash_skill(registry / "skills" / "s")["hash"]
+    lock = json.dumps(
+        {
+            "version": 1,
+            "project_id": PROJECT_ID,
+            "skills": {"s": {"hash": "1" * 64, "files": {}, "skip": {"hash": current, "at": "2026-10-20T00:00:00Z"}}},
+        }
+    )
+
+    async with Client(server_module.mcp) as client:
+        result = await client.call_tool("check_skill_updates", {"file_hashes": file_hashes, "lock": lock})
+
+    data = result.data if getattr(result, "data", None) else json.loads(result.content[0].text)
+    assert data["summary"] == ""
+    assert data["skills"][0]["state"] == "skipped"
+    # project_id is read from the lock text when not passed separately.
+    assert mock_track.call_args_list[0].args[0] == PROJECT_ID
+
+
+def test_skips_from_lock_ignores_garbage():
+    from awos_recruitment_mcp.update_check import skips_from_lock
+
+    assert skips_from_lock(None) == ({}, None)
+    assert skips_from_lock("{not json") == ({}, None)
+    assert skips_from_lock('{"skills": {"a": {"skip": "nope"}}}') == ({}, None)

@@ -136,6 +136,32 @@ describe("computeSkillStatuses", () => {
     expect(status.detail).toBe("version from 2026-03-11, 2 versions behind (not in lock file)");
   });
 
+  it("reports a skipped version as skipped, and outdated again when the registry moves on", () => {
+    const cwd = makeCwd();
+    const local = writeSkill(cwd, "s", { "SKILL.md": "v1" });
+    const lock = lockWith("s", local);
+    lock.skills.s.skip = { hash: "v2hash", at: "2026-10-20T00:00:00Z" };
+    const index = emptyIndex();
+    index.skills.s = { hash: "v2hash", files: {} };
+
+    expect(computeSkillStatuses(cwd, lock, index)[0].state).toBe("skipped");
+
+    index.skills.s = { hash: "v3hash", files: {} };
+    expect(computeSkillStatuses(cwd, lock, index)[0].state).toBe("outdated");
+  });
+
+  it("shows the registry commit when the lock entry knows it", () => {
+    const cwd = makeCwd();
+    const local = writeSkill(cwd, "s", { "SKILL.md": "v1" });
+    const lock = lockWith("s", local);
+    lock.skills.s.commit = "aac82ce";
+    lock.skills.s.released = "2026-09-24";
+    const index = emptyIndex();
+    index.skills.s = local;
+
+    expect(computeSkillStatuses(cwd, lock, index)[0].detail).toBe("commit aac82ce, 2026-09-24");
+  });
+
   it("reports removed with the replacement from the tombstone", () => {
     const cwd = makeCwd();
     const local = writeSkill(cwd, "aws-docs", { "SKILL.md": "x" });

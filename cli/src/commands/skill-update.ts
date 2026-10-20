@@ -67,7 +67,18 @@ export async function skillUpdate(
       );
     }
     const wanted = new Set(names);
-    statuses = statuses.filter((s) => wanted.has(s.name));
+    // Naming a skill overrides an earlier `skill skip` for it.
+    statuses = statuses
+      .filter((s) => wanted.has(s.name))
+      .map((s) =>
+        s.state === "skipped"
+          ? {
+              ...s,
+              state: s.changedFiles.length > 0 ? ("modified-locally" as const) : ("outdated" as const),
+              registryChanged: true,
+            }
+          : s,
+      );
   }
 
   const plan = planUpdate(statuses);
@@ -110,7 +121,7 @@ export async function skillUpdate(
 
   // --- Apply -------------------------------------------------------------------
   if (toRecord.length > 0) {
-    recordSkillInstalls(cwd, toRecord, serverUrl);
+    recordSkillInstalls(cwd, toRecord, serverUrl, index);
     for (const name of toRecord) {
       process.stdout.write(`Recorded '${name}' (already current).\n`);
     }
@@ -128,7 +139,7 @@ export async function skillUpdate(
       }
       const results = processSkills(tempDir, replaceNames, { force: true });
       const installed = results.filter((r) => r.status === "installed").map((r) => r.name);
-      recordSkillInstalls(cwd, installed, serverUrl);
+      recordSkillInstalls(cwd, installed, serverUrl, index);
 
       for (const result of results) {
         if (result.status === "installed") {
@@ -175,6 +186,12 @@ export function planUpdate(statuses: SkillStatus[]): PlannedAction[] {
         return status.adopt
           ? { status, action: "record", reason: "files match the registry; record in lock file" }
           : { status, action: "keep", reason: "up to date" };
+      case "skipped":
+        return {
+          status,
+          action: "keep",
+          reason: "you skipped this version; name the skill to update it anyway",
+        };
       case "modified-locally":
         return status.registryChanged
           ? { status, action: "ask", reason: "local changes and a newer registry version" }

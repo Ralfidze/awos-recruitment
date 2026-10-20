@@ -9,12 +9,24 @@ from pydantic import BaseModel, ConfigDict, Field
 SkillName = Annotated[str, Field(pattern=r"^[a-z0-9-]{1,64}$")]
 
 
-class LockSkill(BaseModel):
-    """One entry of the lock file's ``skills`` map; only ``hash`` is read."""
+Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
+class LockSkip(BaseModel):
+    """The registry version the user chose to skip (`skill skip`)."""
 
     model_config = ConfigDict(extra="ignore")
 
-    hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    hash: Sha256
+
+
+class LockSkill(BaseModel):
+    """One entry of the lock file's ``skills`` map; ``hash`` and ``skip`` are read."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    hash: Sha256
+    skip: LockSkip | None = None
 
 
 class CheckRequest(BaseModel):
