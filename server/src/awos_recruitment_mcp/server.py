@@ -78,10 +78,14 @@ mcp = FastMCP(
         "`shasum -a 256 .claude/skills/*/* .claude/skills/*/*/*` as its own "
         "command (do not chain it with other commands; a non-zero exit from "
         "'Is a directory' lines is expected) and pass the output to the "
-        "check_skill_updates tool. If its summary is not empty, tell the user "
-        "in one line and offer to update before you continue. Do not update "
-        "on your own: run `npx @provectusinc/awos-recruitment skill update` "
-        "only after the user agrees. "
+        "check_skill_updates tool (with the text of "
+        ".claude/awos-recruitment.lock.json as `lock` when that file exists). "
+        "If its summary is not empty, tell the user in one line and offer to "
+        "update before you continue. Do not update on your own: run `npx "
+        "@provectusinc/awos-recruitment skill update` only after the user "
+        "agrees. If the user declines, offer to run `npx "
+        "@provectusinc/awos-recruitment skill skip <names>` so this version is "
+        "not offered again, and run it if they agree. "
         "This server also provides a discovery engine for skills, agents, "
         "tools, and hooks: use search_capabilities to find capabilities "
         "matching a natural language query."
@@ -153,7 +157,12 @@ async def check_updates(request: Request) -> Response:
         return JSONResponse({"error": str(exc)}, status_code=500)
 
     installed = {name: entry.hash for name, entry in check_request.skills.items()}
-    result = check_skills(installed, index)
+    skips = {
+        name: entry.skip.hash
+        for name, entry in check_request.skills.items()
+        if entry.skip is not None
+    }
+    result = check_skills(installed, index, skips)
 
     if check_request.project_id is not None:
         track_check(check_request.project_id, result, source="hook")

@@ -10,6 +10,7 @@ from awos_recruitment_mcp.update_check import (
     load_history,
     parse_shasum_output,
     result_from_files,
+    skips_from_lock,
     summarize_files,
     track_check,
 )
@@ -18,6 +19,7 @@ from awos_recruitment_mcp.update_check import (
 @mcp.tool
 async def check_skill_updates(
     file_hashes: str,
+    lock: str | None = None,
     project_id: str | None = None,
 ) -> dict:
     """Check whether the skills installed in this project are outdated or removed from the registry.
@@ -34,13 +36,18 @@ async def check_skill_updates(
     works too; "Is a directory" lines and a non-zero exit are expected. If the
     returned `summary` is not empty, tell the user in one line and offer to
     update before you continue. If it is empty, say nothing about it. Do not
-    update on your own: run `command` only after the user agrees.
+    update on your own: run `command` only after the user agrees. If the user
+    declines, offer `skill skip <names>` so this version is not offered again,
+    and run it if they agree. Pass the lock file text as `lock` when it exists.
 
     Args:
         file_hashes: Raw output of `shasum -a 256` / `sha256sum` over the files
             under `.claude/skills/`. One `<sha256>  <path>` per line.
-        project_id: Optional `project_id` from `.claude/awos-recruitment.lock.json`
-            if that file exists, for anonymous telemetry.
+        lock: Optional full text of `.claude/awos-recruitment.lock.json`, when the
+            file exists. Skills whose current registry version the user
+            skipped (`skill skip`) are then left out of the summary.
+        project_id: Optional `project_id` from the lock file, for anonymous
+            telemetry. Read from `lock` when not given.
     """
     skills = parse_shasum_output(file_hashes)
     if not skills:
@@ -51,9 +58,12 @@ async def check_skill_updates(
             "note": "No `.claude/skills/<name>/<file>` paths found in file_hashes.",
         }
 
+    skips, lock_project_id = skips_from_lock(lock)
+    project_id = project_id or lock_project_id
+
     index = build_registry_index(config.registry_path)
     history = load_history(config.registry_path)
-    results = check_files(skills, index, history)
+    results = check_files(skills, index, history, skips)
 
     if project_id is not None:
         track_check(project_id, result_from_files(results), source="mcp")

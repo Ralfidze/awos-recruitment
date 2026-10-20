@@ -3,6 +3,7 @@ import * as path from "node:path";
 
 import { downloadBundle } from "../lib/download.js";
 import { readLock, recordSkillInstalls } from "../lib/lock.js";
+import { fetchRegistryIndex, type RegistryIndex } from "../lib/registry-index.js";
 import { resolveServerUrl } from "../lib/server-url.js";
 import type { InstallResult } from "../lib/types.js";
 
@@ -34,7 +35,8 @@ export async function installSkills(
   try {
     const firstInstall = readLock(process.cwd()) === null;
     const results = processSkills(tempDir, names, options);
-    recordSkillInstalls(process.cwd(), installedNames(results), serverUrl);
+    const index = await indexForLock(serverUrl, installedNames(results));
+    recordSkillInstalls(process.cwd(), installedNames(results), serverUrl, index);
     printResults(results);
     if (firstInstall && installedNames(results).length > 0) {
       printUpdateCheckTip(process.cwd());
@@ -48,6 +50,25 @@ export async function installSkills(
     }
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The registry index, used only to record the installed version's commit in
+ * the lock file. Best effort: an old server without `/index.json`, or no
+ * network, leaves the commit out and the install still succeeds.
+ */
+async function indexForLock(
+  serverUrl: string,
+  installed: string[],
+): Promise<RegistryIndex | null> {
+  if (installed.length === 0) {
+    return null;
+  }
+  try {
+    return (await fetchRegistryIndex(serverUrl)) ?? null;
+  } catch {
+    return null;
   }
 }
 

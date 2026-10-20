@@ -68,16 +68,24 @@ class CheckResult:
         }
 
 
-def check_skills(installed: dict[str, str], index: dict[str, Any]) -> CheckResult:
+def check_skills(
+    installed: dict[str, str],
+    index: dict[str, Any],
+    skips: dict[str, str] | None = None,
+) -> CheckResult:
     """Compare ``{skill name: lock hash}`` with a registry index.
 
     Args:
         installed: Skill names and the capability hash from the lock file.
         index: The document ``build_registry_index`` returns.
+        skips: ``{skill name: registry hash the user skipped}`` from the lock
+            file. A skill whose current registry hash was skipped counts as
+            up to date until the registry moves on.
 
     Returns:
         A :class:`CheckResult` with names sorted.
     """
+    skips = skips or {}
     result = CheckResult()
     registry_skills = index.get("skills", {})
     removed_skills = index.get("removed", {}).get("skills", {})
@@ -89,7 +97,10 @@ def check_skills(installed: dict[str, str], index: dict[str, Any]) -> CheckResul
             )
         elif name not in registry_skills:
             result.unknown.append(name)
-        elif registry_skills[name]["hash"] != installed[name]:
+        elif (
+            registry_skills[name]["hash"] != installed[name]
+            and skips.get(name) != registry_skills[name]["hash"]
+        ):
             result.outdated.append(name)
         else:
             result.up_to_date += 1
@@ -166,10 +177,34 @@ def load_history(registry_path: str | Path) -> dict[str, Any]:
         return {"skills": {}}
 
 
+def skips_from_lock(lock_text: str | None) -> tuple[dict[str, str], str | None]:
+    """Read ``{skill: skipped registry hash}`` and ``project_id`` from lock file text.
+
+    Malformed or missing text yields nothing: the check then reports every
+    outdated skill, which is the safe default.
+    """
+    if not lock_text:
+        return {}, None
+    try:
+        lock = json.loads(lock_text)
+    except ValueError:
+        return {}, None
+    if not isinstance(lock, dict):
+        return {}, None
+    skips: dict[str, str] = {}
+    for name, entry in (lock.get("skills") or {}).items():
+        skip = entry.get("skip") if isinstance(entry, dict) else None
+        if isinstance(skip, dict) and isinstance(skip.get("hash"), str):
+            skips[str(name)] = skip["hash"]
+    project_id = lock.get("project_id")
+    return skips, project_id if isinstance(project_id, str) else None
+
+
 def check_files(
     skills: dict[str, dict[str, str]],
     index: dict[str, Any],
     history: dict[str, Any],
+    skips: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Classify installed skills from their file hashes.
 
@@ -205,6 +240,9 @@ def check_files(
             entry["detail"] = "the registry has no skill with this name"
         elif registry_skills[name]["hash"] == local_hash:
             entry["state"] = "up-to-date"
+        elif (skips or {}).get(name) == registry_skills[name]["hash"]:
+            entry["state"] = "skipped"
+            entry["detail"] = "the user skipped this registry version"
         else:
             versions = history_skills.get(name, [])
             position = next((i for i, v in enumerate(versions) if v["hash"] == local_hash), -1)

@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { CliError } from "./errors.js";
+import type { RegistryIndex } from "./registry-index.js";
 
 /**
  * Lock file written next to installed capabilities. It records what the CLI
@@ -31,6 +32,12 @@ export interface LockEntry {
   hash: string;
   /** Relative path (POSIX) -> hex sha256 of the file. */
   files: Record<string, string>;
+  /** Registry commit of the installed version, when the server knew it. */
+  commit?: string;
+  /** Date that version appeared in the registry (YYYY-MM-DD). */
+  released?: string;
+  /** Registry version the user chose not to take (`skill skip`). */
+  skip?: { hash: string; at: string };
 }
 
 export interface LockFile {
@@ -85,6 +92,11 @@ export function hashDirectory(dir: string): DirectoryHash {
 
   walk(dir, "");
   return { hash: combinedHash(files), files };
+}
+
+/** The lock file of `cwd`, or a fresh one with a new project id. */
+export function readOrCreateLock(cwd: string): LockFile {
+  return readLock(cwd) ?? emptyLock();
 }
 
 function emptyLock(): LockFile {
@@ -156,6 +168,7 @@ export function recordSkillInstalls(
   cwd: string,
   names: string[],
   serverUrl: string,
+  index: RegistryIndex | null = null,
 ): void {
   if (names.length === 0) {
     return;
@@ -167,12 +180,23 @@ export function recordSkillInstalls(
   for (const name of names) {
     const skillDir = path.join(cwd, ".claude", "skills", name);
     const { hash, files } = hashDirectory(skillDir);
-    lock.skills[name] = {
+    const entry: LockEntry = {
       server: serverUrl,
       installed_at: installedAt,
       hash,
       files,
     };
+    // A readable version next to the hash, when the installed files are the
+    // registry's current version and the server knows its commit.
+    const current = index?.skills[name];
+    if (current !== undefined && current.hash === hash && current.commit) {
+      entry.commit = current.commit;
+      if (current.released) {
+        entry.released = current.released;
+      }
+    }
+    // A fresh install replaces any earlier skip: no `skip` is carried over.
+    lock.skills[name] = entry;
   }
 
   writeLock(cwd, lock);

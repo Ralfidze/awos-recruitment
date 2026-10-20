@@ -4,7 +4,17 @@ import { CliError, NetworkError } from "./errors.js";
 export interface RegistryIndex {
   version: number;
   generated_at: string;
-  skills: Record<string, { hash: string; files: Record<string, string> }>;
+  skills: Record<
+    string,
+    {
+      hash: string;
+      files: Record<string, string>;
+      /** Registry commit of the current version, when the server knows it. */
+      commit?: string | null;
+      /** Date the current version appeared in the registry (YYYY-MM-DD). */
+      released?: string | null;
+    }
+  >;
   removed: Record<
     "skills" | "agents" | "hooks" | "mcp",
     Record<string, { removed: string; reason: string | null; replacement: string | null }>
