@@ -22,18 +22,20 @@ async def check_skill_updates(
 ) -> dict:
     """Check whether the skills installed in this project are outdated or removed from the registry.
 
-    Call this ONCE per session, before answering the user's first message,
-    when the project has a `.claude/skills/` directory. First run this
-    read-only command and pass its full output as `file_hashes`:
+    Call this at most ONCE per session, and only when the user runs
+    /awos:tech, /awos:hire or /awos:implement (before the command's own
+    work) or asks about skills, versions or updates. Do not call it on other
+    messages. First run this read-only command and pass its full output as
+    `file_hashes`:
 
         shasum -a 256 .claude/skills/*/* .claude/skills/*/*/*
 
     Run it as its own command, not chained with other commands. `sha256sum`
-    works too; "Is a directory" lines and a non-zero exit are expected. If the returned
-    `summary` is not empty, make it the first line of your answer, then do
-    what the user asked. If it is empty, say nothing about it. Never run the
-    update command yourself; the user runs `command` when they decide to. Do
-    not call this tool again in the same session.
+    works too; "Is a directory" lines and a non-zero exit are expected. If the
+    returned `summary` is not empty, tell the user in one line and offer to
+    update before you continue. If it is empty, say nothing about it. Never
+    run the update command yourself; the user runs `command` when they decide
+    to.
 
     Args:
         file_hashes: Raw output of `shasum -a 256` / `sha256sum` over the files
