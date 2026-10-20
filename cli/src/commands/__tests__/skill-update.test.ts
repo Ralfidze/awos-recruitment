@@ -203,6 +203,21 @@ describe("skillUpdate", () => {
     expect(mockFetchHistory).not.toHaveBeenCalled();
   });
 
+  it("keeps a skipped skill, and updates it when it is named", async () => {
+    const { cwd, index } = setupOutdatedProject();
+    const lock = readLock(cwd)!;
+    lock.skills.s.skip = { hash: index.skills.s.hash, at: "2026-10-20T00:00:00Z" };
+    writeLock(cwd, lock);
+
+    await skillUpdate([]);
+    expect(mockDownloadBundle).not.toHaveBeenCalled();
+    expect(fs.readFileSync(path.join(cwd, ".claude", "skills", "s", "SKILL.md"), "utf-8")).toBe("v1");
+
+    await skillUpdate(["s"]);
+    expect(fs.readFileSync(path.join(cwd, ".claude", "skills", "s", "SKILL.md"), "utf-8")).toBe("v2");
+    expect(readLock(cwd)?.skills.s.skip).toBeUndefined();
+  });
+
   it("rejects names that are not installed", async () => {
     setupOutdatedProject();
 

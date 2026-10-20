@@ -225,3 +225,28 @@ async def test_index_route_hash_matches_bundle_content(tmp_path, client_factory)
 
     assert files == index["skills"]["s"]["files"]
     assert combined_hash(files) == index["skills"]["s"]["hash"]
+
+
+def test_index_carries_commit_and_date_of_the_current_version(tmp_path):
+    """history.json names the commit of each version; the index copies it for the current one."""
+    _write_skill(tmp_path, "s", {})
+    current = hash_skill(tmp_path / "skills" / "s")["hash"]
+    (tmp_path / "history.json").write_text(
+        '{"version": 1, "skills": {"s": ['
+        '{"hash": "' + "0" * 64 + '", "from": "2026-03-01", "to": "2026-09-24", "commit": "aaaaaaa"},'
+        '{"hash": "' + current + '", "from": "2026-09-24", "to": null, "commit": "bbbbbbb"}]}}'
+    )
+
+    entry = build_registry_index(tmp_path)["skills"]["s"]
+
+    assert entry["commit"] == "bbbbbbb"
+    assert entry["released"] == "2026-09-24"
+
+
+def test_index_omits_commit_when_history_does_not_know_the_current_version(tmp_path):
+    _write_skill(tmp_path, "s", {})
+    (tmp_path / "history.json").write_text('{"version": 1, "skills": {"s": [{"hash": "x", "from": "d", "commit": "c"}]}}')
+
+    entry = build_registry_index(tmp_path)["skills"]["s"]
+
+    assert "commit" not in entry

@@ -7,6 +7,7 @@ import type { RegistryHistory, RegistryIndex } from "./registry-index.js";
 export type SkillState =
   | "up-to-date"
   | "outdated"
+  | "skipped"
   | "modified-locally"
   | "removed"
   | "not-in-registry"
@@ -34,6 +35,7 @@ export interface SkillStatus {
 export const STATE_LABELS: Record<SkillState, string> = {
   "up-to-date": "up to date",
   outdated: "outdated",
+  skipped: "skipped by you",
   "modified-locally": "modified locally",
   removed: "removed from registry",
   "not-in-registry": "not in registry",
@@ -135,7 +137,9 @@ export function computeSkillStatuses(
       statuses.push({
         ...base,
         state: "up-to-date",
-        detail: adopt ? "not recorded in the lock file yet; `skill update` records it" : "",
+        detail: adopt
+          ? "not recorded in the lock file yet; `skill update` records it"
+          : versionLabel(lockEntry ?? {}).replace(/^; /, ""),
         adopt,
       });
       continue;
@@ -170,6 +174,16 @@ export function computeSkillStatuses(
     const changedFiles = diffFiles(lockEntry.files, local.files);
     const registryChanged = registry.hash !== lockEntry.hash;
 
+    if (registryChanged && lockEntry.skip?.hash === registry.hash) {
+      statuses.push({
+        ...base,
+        state: "skipped",
+        detail: `until the registry publishes a newer version${versionLabel(lockEntry)}`,
+        changedFiles,
+      });
+      continue;
+    }
+
     if (changedFiles.length > 0) {
       const count = `${changedFiles.length} file${changedFiles.length === 1 ? "" : "s"} changed`;
       statuses.push({
@@ -187,7 +201,9 @@ export function computeSkillStatuses(
     statuses.push({
       ...base,
       state: registryChanged ? "outdated" : "up-to-date",
-      detail: registryChanged ? `installed ${lockEntry.installed_at.slice(0, 10)}` : "",
+      detail: registryChanged
+        ? `installed ${lockEntry.installed_at.slice(0, 10)}${versionLabel(lockEntry)}`
+        : versionLabel(lockEntry).replace(/^; /, ""),
       registryChanged,
     });
   }
@@ -198,4 +214,12 @@ export function computeSkillStatuses(
 /** True when a status could be resolved by the version history. */
 export function needsHistory(statuses: SkillStatus[]): boolean {
   return statuses.some((s) => s.state === "no-lock-entry");
+}
+
+/** "; commit aac82ce, 2026-09-24" when the lock entry knows its registry version. */
+function versionLabel(entry: { commit?: string; released?: string }): string {
+  if (!entry.commit) {
+    return "";
+  }
+  return entry.released ? `; commit ${entry.commit}, ${entry.released}` : `; commit ${entry.commit}`;
 }

@@ -19,6 +19,7 @@ or renamed, add an entry there so installed copies can learn about it.
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -203,6 +204,19 @@ def load_removed(registry_path: str | Path) -> dict[str, dict[str, dict[str, Any
     return result
 
 
+def _latest_versions(root: Path) -> dict[str, dict[str, Any]]:
+    """Return the newest entry of each skill in ``<registry>/history.json``, or nothing."""
+    history_file = root / "history.json"
+    if not history_file.is_file():
+        return {}
+    try:
+        with open(history_file, encoding="utf-8") as fh:
+            skills = json.load(fh).get("skills", {})
+    except (OSError, ValueError, AttributeError):
+        return {}
+    return {name: versions[-1] for name, versions in skills.items() if versions}
+
+
 def build_registry_index(registry_path: str | Path) -> dict[str, Any]:
     """Build the document served at ``GET /index.json``.
 
@@ -223,6 +237,15 @@ def build_registry_index(registry_path: str | Path) -> dict[str, Any]:
             if not skill_dir.is_dir() or not (skill_dir / "SKILL.md").is_file():
                 continue
             skills[skill_dir.name] = hash_skill(skill_dir)
+
+    # The commit and date of the current version, when the version history
+    # (generated at deploy) knows it. Lets the CLI record a version people can
+    # read ("commit aac82ce, 2026-09-24") next to the hash.
+    for name, latest in _latest_versions(root).items():
+        entry = skills.get(name)
+        if entry is not None and latest.get("hash") == entry["hash"]:
+            entry["commit"] = latest.get("commit")
+            entry["released"] = latest.get("from")
 
     return {
         "version": INDEX_VERSION,

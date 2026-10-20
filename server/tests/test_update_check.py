@@ -138,6 +138,18 @@ async def test_check_route_rejects_bad_bodies(registry, client_factory, body):
     assert response.status_code == 400
 
 
+async def test_check_route_respects_a_skipped_version(registry, client_factory):
+    lock = _lock(registry)
+    current = hash_skill(registry / "skills" / "stale")["hash"]
+    lock["skills"]["stale"]["skip"] = {"hash": current, "at": "2026-10-20T00:00:00Z"}
+
+    async with client_factory(registry) as client:
+        response = await client.post("/check", json=lock)
+
+    assert response.status_code == 200
+    assert response.json()["outdated"] == []
+
+
 # ---------------------------------------------------------------------------
 # Server instructions nudge connected sessions to check for updates
 # ---------------------------------------------------------------------------

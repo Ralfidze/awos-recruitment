@@ -19,6 +19,14 @@ vi.mock("../../lib/download.js", () => ({
   downloadBundle: mockDownloadBundle,
 }));
 
+const { mockFetchIndex } = vi.hoisted(() => ({
+  mockFetchIndex: vi.fn<(url: string) => Promise<unknown>>(),
+}));
+
+vi.mock("../../lib/registry-index.js", () => ({
+  fetchRegistryIndex: mockFetchIndex,
+}));
+
 // ---------------------------------------------------------------------------
 // Shared state
 // ---------------------------------------------------------------------------
@@ -288,5 +296,47 @@ describe("installSkills", () => {
     expect(process.stdout.write).not.toHaveBeenCalledWith(
       expect.stringContaining("hook skill-update-check"),
     );
+  });
+
+  // -----------------------------------------------------------------------
+  // 7. Registry commit in the lock entry
+  // -----------------------------------------------------------------------
+  it("records the registry commit when the installed files are the current version", async () => {
+    const bundleDir = makeTempDir("bundle-");
+    fs.mkdirSync(path.join(bundleDir, "s"), { recursive: true });
+    fs.writeFileSync(path.join(bundleDir, "s", "SKILL.md"), "v2", "utf-8");
+    mockDownloadBundle.mockResolvedValue(bundleDir);
+    const expected = hashDirectory(path.join(bundleDir, "s")).hash;
+    mockFetchIndex.mockResolvedValue({
+      version: 1,
+      generated_at: "",
+      skills: { s: { hash: expected, files: {}, commit: "aac82ce", released: "2026-09-24" } },
+      removed: { skills: {}, agents: {}, hooks: {}, mcp: {} },
+    });
+    const fakeCwd = makeTempDir("cwd-");
+    vi.spyOn(process, "cwd").mockReturnValue(fakeCwd);
+
+    await installSkills(["s"]);
+
+    const entry = readLock(fakeCwd)?.skills.s;
+    expect(entry?.commit).toBe("aac82ce");
+    expect(entry?.released).toBe("2026-09-24");
+  });
+
+  it("still installs when the index cannot be fetched", async () => {
+    const bundleDir = makeTempDir("bundle-");
+    fs.mkdirSync(path.join(bundleDir, "s"), { recursive: true });
+    fs.writeFileSync(path.join(bundleDir, "s", "SKILL.md"), "v2", "utf-8");
+    mockDownloadBundle.mockResolvedValue(bundleDir);
+    mockFetchIndex.mockRejectedValue(new Error("offline"));
+    const fakeCwd = makeTempDir("cwd-");
+    vi.spyOn(process, "cwd").mockReturnValue(fakeCwd);
+
+    await installSkills(["s"]);
+
+    const entry = readLock(fakeCwd)?.skills.s;
+    expect(entry?.hash).toBeDefined();
+    expect(entry?.commit).toBeUndefined();
+    expect(process.exit).not.toHaveBeenCalled();
   });
 });
