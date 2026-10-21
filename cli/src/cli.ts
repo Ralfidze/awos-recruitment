@@ -3,6 +3,7 @@ import { installHooks } from "./commands/hook.js";
 import { installMcpServers } from "./commands/mcp.js";
 import { installSkills } from "./commands/skill.js";
 import { skillStatus } from "./commands/skill-status.js";
+import { skillDiff } from "./commands/skill-diff.js";
 import { skipSkills } from "./commands/skill-skip.js";
 import { skillUpdate } from "./commands/skill-update.js";
 import { CliError } from "./lib/errors.js";
@@ -14,6 +15,7 @@ Commands:
   skill status              Compare installed skills with the registry (--json)
   skill update [names...]   Update outdated skills (--dry-run, --overwrite, --no-overwrite)
   skill skip <names...>     Do not offer the current registry version of these skills again
+  skill diff [names...]     Show what an update would change in each skill
   mcp <names...>            Install MCP servers into .mcp.json
   agent <names...>          Install agents into .claude/agents/
   hook <names...>           Install hooks into .claude/hooks/ (prompts; --yes/-y to skip)
@@ -55,6 +57,11 @@ export async function run(): Promise<void> {
       throw new CliError("Error: 'skill status' takes no names.");
     }
     await skillStatus({ json: flags.has("--json") });
+    return;
+  }
+
+  if (subcommand === "skill" && names[0] === "diff") {
+    await skillDiff(names.slice(1));
     return;
   }
 
