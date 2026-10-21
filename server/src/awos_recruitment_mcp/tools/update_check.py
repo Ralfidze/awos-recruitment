@@ -34,8 +34,11 @@ async def check_skill_updates(
 
     Run it as its own command, not chained with other commands. `sha256sum`
     works too; "Is a directory" lines and a non-zero exit are expected. If the
-    returned `summary` is not empty, tell the user in one line and offer to
-    update before you continue. If it is empty, say nothing about it. Do not
+    returned `summary` is not empty, run `npx @provectusinc/awos-recruitment
+    skill diff <names>` and tell the user in one line what is outdated and,
+    per skill, in two or three short points what the update would change
+    (including their own edits that it would remove); then offer to update
+    before you continue. If it is empty, say nothing about it. Do not
     update on your own: run `command` only after the user agrees. If the user
     declines, offer `skill skip <names>` so this version is not offered again,
     and run it if they agree. Pass the lock file text as `lock` when it exists.
