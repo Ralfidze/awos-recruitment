@@ -74,6 +74,9 @@ npx @provectusinc/awos-recruitment skill modern-python-development --force
 
 # Do not offer the current registry version of a skill again
 npx @provectusinc/awos-recruitment skill skip react-best-practices
+
+# Show what an update would change (your files against the registry)
+npx @provectusinc/awos-recruitment skill diff
 ```
 
 `skill skip` records the skipped registry version in the lock file. `status` shows the skill as `skipped by you`, and `update`, the session-start hook and the MCP check stay quiet about it until the registry publishes a newer version. `skill update <name>` still updates it. When the installed files are the registry's current version, the lock entry also records its registry `commit` and `released` date, and `status` shows them.
