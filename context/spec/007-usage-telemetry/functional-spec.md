@@ -26,10 +26,12 @@ When a user performs a search and the server returns results, the system must em
 - **Event data:**
   - The search query text submitted by the client.
   - The list of capability identifiers (IDs or names) returned in the results.
+  - The number of results (`result_count`), the best similarity score in the list (`top_score`, `null` when the list is empty), and the capability type the search was restricted to (`type_filter`, `null` when unrestricted). These flat fields let analysts find gaps without parsing the results list: a zero `result_count` is a hard gap, a low `top_score` is a weak match.
 - **Acceptance Criteria:**
   - [x] Every successful search that returns one or more results emits a `capability_searched` event to PostHog.
   - [x] The event payload contains the exact query text and the full list of returned capability identifiers.
   - [x] Searches that return zero results still emit the event (with an empty results list) so that "no results" queries are visible.
+  - [x] The event payload carries `result_count`, `top_score`, and `type_filter` as flat properties.
   - [x] The event is sent asynchronously — it must not add latency to the search response returned to the client.
 
 ### 2.2. Event: Capability Installed
