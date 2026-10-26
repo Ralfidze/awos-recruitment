@@ -46,7 +46,22 @@ When a user installs a capability, the system must emit a telemetry event to Pos
   - [x] The event payload contains the identifier of the installed capability.
   - [x] The event is sent asynchronously — it must not add latency to the install response returned to the client.
 
-### 2.3. Failure Handling
+### 2.3. Event: Search Did Not Help (Gap Report)
+
+A search event records what the registry returned; it cannot record whether the caller could use it. A result with a high similarity score may still be the wrong capability for the need. The `report_gap` MCP tool lets the caller say so, and the server records it.
+
+- **Event name:** `capability_gap`
+- **Event data:**
+  - The search text the caller used (`query`).
+  - The capability names the search returned (`offered`, possibly empty) and their count (`offered_count`).
+  - The caller's reason (`reason`): `no_results`, `not_relevant`, or `wrong_type`.
+  - Optionally the role or agent the capability was needed for (`needed_for`) and a one-sentence explanation (`note`).
+- **Acceptance Criteria:**
+  - [x] The `report_gap` tool is listed next to `search_capabilities` and accepts `query`, `reason`, and optional `offered`, `needed_for`, `note`.
+  - [x] A valid call emits one `capability_gap` event; an invalid `reason`, an empty `query`, or `no_results` with a non-empty `offered` list returns an error string and emits nothing.
+  - [x] The tool changes nothing in the registry and never fails the caller because of a telemetry error.
+
+### 2.4. Failure Handling
 
 Telemetry must never degrade the core search and install experience.
 
@@ -54,7 +69,7 @@ Telemetry must never degrade the core search and install experience.
   - [x] If sending an event to PostHog fails (network error, service unavailable, timeout), the failure is logged for ops visibility and the event is discarded.
   - [x] A telemetry failure never causes the search or install request to fail, slow down, or return an error to the client.
 
-### 2.4. Anonymity
+### 2.5. Anonymity
 
 All telemetry events are fully anonymous.
 
