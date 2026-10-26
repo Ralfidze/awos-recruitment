@@ -2,6 +2,27 @@
 
 > **SDK Version Note**: This guide covers the SDK 55+ Native Tabs API. For migration from SDK 53/54, see `upgrading-expo/native-tabs.md`.
 
+## Contents
+
+- [Basic Usage](#basic-usage)
+- [Rules](#rules)
+- [Platform Features](#platform-features)
+- [Icon Component](#icon-component)
+- [Label Component](#label-component)
+- [Badge Component](#badge-component)
+- [iOS 26 Features](#ios-26-features)
+- [BottomAccessory](#bottomaccessory)
+- [Customization](#customization)
+- [Conditional Tabs](#conditional-tabs)
+- [Behavior Options](#behavior-options)
+- [Using Vector Icons](#using-vector-icons)
+- [Structure with Stacks](#structure-with-stacks)
+- [Migration from JS Tabs](#migration-from-js-tabs)
+- [Limitations](#limitations)
+- [Keyboard Handling (Android)](#keyboard-handling-android)
+- [Common Issues](#common-issues)
+
+
 Always prefer NativeTabs from 'expo-router/unstable-native-tabs' for the best iOS experience.
 
 **Requires SDK 55+**

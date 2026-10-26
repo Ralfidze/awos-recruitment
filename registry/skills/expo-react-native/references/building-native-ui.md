@@ -1,32 +1,45 @@
----
-name: building-native-ui
-description: Complete guide for building beautiful apps with Expo Router. Covers fundamentals, styling, components, navigation, animations, patterns, and native tabs.
-version: 1.0.0
-license: MIT
----
-
 # Expo UI Guidelines
+
+
+## Contents
+
+- [References](#references)
+- [Running the App](#running-the-app)
+- [Code Style](#code-style)
+- [Routes](#routes)
+- [Library Preferences](#library-preferences)
+- [Responsiveness](#responsiveness)
+- [Behavior](#behavior)
+- [General Styling Rules](#general-styling-rules)
+- [Text Styling](#text-styling)
+- [Shadows](#shadows)
+- [Link](#link)
+- [Stack](#stack)
+- [Context Menus](#context-menus)
+- [Link Previews](#link-previews)
+- [Modal](#modal)
+- [Sheet](#sheet)
+- [Common route structure](#common-route-structure)
 
 ## References
 
 Consult these resources as needed:
 
-- ./references/route-structure.md -- Route file conventions, dynamic routes, query parameters, groups, and folder organization
-- ./references/tabs.md -- Native tab bar with NativeTabs, migration from JS tabs, iOS 26 features
-- ./references/icons.md -- SF Symbols with expo-symbols, common icon names, animations, and weights
-- ./references/controls.md -- Native iOS controls: Switch, Slider, SegmentedControl, DateTimePicker, Picker
-- ./references/visual-effects.md -- Blur effects with expo-blur and liquid glass with expo-glass-effect
-- ./references/animations.md -- Reanimated animations: entering, exiting, layout, scroll-driven, and gestures
-- ./references/search.md -- Search bar integration with headers, useSearch hook, and filtering patterns
-- ./references/gradients.md -- CSS gradients using experimental_backgroundImage (New Architecture only)
-- ./references/media.md -- Media handling for Expo Router including camera, audio, video, and file saving
-- ./references/storage.md -- Data storage patterns including SQLite, AsyncStorage, and SecureStore
-- ./references/webgpu-three.md -- 3D graphics, games, and GPU-powered visualizations with WebGPU and Three.js
-- ./references/toolbar-and-headers.md -- Customizing stack headers and toolbar with buttons, menus, and search bars in expo-router app. Available only on iOS.
+- [route-structure.md](route-structure.md) -- Route file conventions, dynamic routes, query parameters, groups, and folder organization
+- [tabs.md](tabs.md) -- Native tab bar with NativeTabs, migration from JS tabs, iOS 26 features
+- [icons.md](icons.md) -- SF Symbols with expo-symbols, common icon names, animations, and weights
+- [controls.md](controls.md) -- Native iOS controls: Switch, Slider, SegmentedControl, DateTimePicker, Picker
+- [visual-effects.md](visual-effects.md) -- Blur effects with expo-blur and liquid glass with expo-glass-effect
+- [animations.md](animations.md) -- Reanimated animations: entering, exiting, layout, scroll-driven, and gestures
+- [search.md](search.md) -- Search bar integration with headers, useSearch hook, and filtering patterns
+- [gradients.md](gradients.md) -- CSS gradients using experimental_backgroundImage (New Architecture only)
+- [media.md](media.md) -- Media handling for Expo Router including camera, audio, video, and file saving
+- [storage.md](storage.md) -- Data storage patterns including SQLite, AsyncStorage, and SecureStore
+- [toolbar-and-headers.md](toolbar-and-headers.md) -- Customizing stack headers and toolbar with buttons, menus, and search bars in expo-router app. Available only on iOS.
 
 ## Running the App
 
-**CRITICAL: Always try Expo Go first before creating custom builds.**
+Try Expo Go first. Create a custom development build only when the app needs native code Expo Go does not ship.
 
 Most Expo apps work in Expo Go without any custom native code. Before running `npx expo run:ios` or `npx expo run:android`:
 
@@ -65,7 +78,7 @@ Expo Go supports a huge range of features out of the box:
 
 ## Routes
 
-See `./references/route-structure.md` for detailed route conventions.
+See `[route-structure.md](route-structure.md)` for detailed route conventions.
 
 - Routes belong in the `app` directory.
 - Never co-locate components, types, or utilities in the app directory. This is an anti-pattern.
@@ -79,7 +92,7 @@ See `./references/route-structure.md` for detailed route conventions.
 - `expo-video` not `expo-av`
 - `expo-symbols` not `@expo/vector-icons`
 - `react-native-safe-area-context` not react-native SafeAreaView
-- `process.env.EXPO_OS` not `Platform.OS`
+- `process.env.EXPO_OS` not `Platform.OS` for platform checks. `Platform.select()` is fine where a React Native API needs runtime branching, for example `DynamicColorIOS` in [tabs.md](tabs.md)
 - `React.use` not `React.useContext`
 - `expo-image` Image component instead of intrinsic element `img`
 - `expo-glass-effect` for liquid glass backdrops
@@ -90,7 +103,7 @@ See `./references/route-structure.md` for detailed route conventions.
 - Use `<ScrollView contentInsetAdjustmentBehavior="automatic" />` instead of `<SafeAreaView>` for smarter safe area insets
 - `contentInsetAdjustmentBehavior="automatic"` should be applied to FlatList and SectionList as well
 - Use flexbox instead of Dimensions API
-- ALWAYS prefer `useWindowDimensions` over `Dimensions.get()` to measure screen size
+- Prefer `useWindowDimensions` over `Dimensions.get()` to measure screen size
 
 ## Behavior
 
@@ -115,7 +128,7 @@ Follow Apple Human Interface Guidelines.
 - Inline styles not StyleSheet.create unless reusing styles is faster
 - Add entering and exiting animations for state changes
 - Use `{ borderCurve: 'continuous' }` for rounded corners unless creating a capsule shape
-- ALWAYS use a navigation stack title instead of a custom text element on the page
+- Use a navigation stack title instead of a custom text element on the page
 - When padding a ScrollView, use `contentContainerStyle` padding and gap instead of padding on the ScrollView itself (reduces clipping)
 - CSS and Tailwind are not supported - use inline styles
 
@@ -126,7 +139,7 @@ Follow Apple Human Interface Guidelines.
 
 ## Shadows
 
-Use CSS `boxShadow` style prop. NEVER use legacy React Native shadow or elevation styles.
+Use the CSS `boxShadow` style prop, not the legacy React Native shadow or elevation styles.
 
 ```tsx
 <View style={{ boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)" }} />
@@ -156,7 +169,7 @@ Whenever possible, include a `<Link.Preview>` to follow iOS conventions. Add con
 
 ## Stack
 
-- ALWAYS use `_layout.tsx` files to define stacks
+- Use `_layout.tsx` files to define stacks
 - Use Stack from 'expo-router/stack' for native navigation stacks
 
 ### Page Title

@@ -1,5 +1,14 @@
 # Media
 
+
+## Contents
+
+- [Camera](#camera)
+- [Audio Playback](#audio-playback)
+- [Audio Recording (Microphone)](#audio-recording-microphone)
+- [Video Playback](#video-playback)
+- [Saving Media](#saving-media)
+
 ## Camera
 
 - Hide navigation headers when there's a full screen camera

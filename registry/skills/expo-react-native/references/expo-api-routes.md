@@ -1,9 +1,23 @@
----
-name: expo-api-routes
-description: Guidelines for creating API routes in Expo Router with EAS Hosting
-version: 1.0.0
-license: MIT
----
+# Expo Router API Routes
+
+## Contents
+
+- [When to Use API Routes](#when-to-use-api-routes)
+- [When NOT to Use API Routes](#when-not-to-use-api-routes)
+- [File Structure](#file-structure)
+- [Basic API Route](#basic-api-route)
+- [HTTP Methods](#http-methods)
+- [Dynamic Routes](#dynamic-routes)
+- [Request Handling](#request-handling)
+- [Environment Variables](#environment-variables)
+- [CORS Headers](#cors-headers)
+- [Error Handling](#error-handling)
+- [Testing Locally](#testing-locally)
+- [Deployment to EAS Hosting](#deployment-to-eas-hosting)
+- [EAS Hosting Runtime (Cloudflare Workers)](#eas-hosting-runtime-cloudflare-workers)
+- [Calling API Routes from Client](#calling-api-routes-from-client)
+- [Common Patterns](#common-patterns)
+- [Rules](#rules)
 
 ## When to Use API Routes
 
@@ -160,11 +174,11 @@ Set environment variables:
 
 ## CORS Headers
 
-Add CORS for web clients:
+Add CORS for web clients. Allow the origins you serve, not `*`: a wildcard lets any site call the route with the user's cookies, and browsers reject `*` together with credentials anyway.
 
 ```ts
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://app.example.com",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

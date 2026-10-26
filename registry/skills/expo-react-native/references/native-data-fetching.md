@@ -1,13 +1,16 @@
----
-name: native-data-fetching
-description: Use when implementing or debugging ANY network request, API call, or data fetching. Covers fetch API, axios, React Query, SWR, error handling, caching strategies, offline support.
-version: 1.0.0
-license: MIT
----
-
 # Expo Networking
 
 **You MUST use this skill for ANY networking work including API requests, data fetching, caching, or network debugging.**
+
+## Contents
+
+- [When to Use](#when-to-use)
+- [Preferences](#preferences)
+- [Common Issues & Solutions](#common-issues-solutions)
+- [Decision Tree](#decision-tree)
+- [Common Mistakes](#common-mistakes)
+- [Example Invocations](#example-invocations)
+
 
 ## When to Use
 

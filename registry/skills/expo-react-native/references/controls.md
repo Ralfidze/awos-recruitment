@@ -2,6 +2,18 @@
 
 Native iOS controls provide built-in haptics, accessibility, and platform-appropriate styling.
 
+## Contents
+
+- [Switch](#switch)
+- [Segmented Control](#segmented-control)
+- [Slider](#slider)
+- [Date/Time Picker](#datetime-picker)
+- [Stepper](#stepper)
+- [TextInput](#textinput)
+- [Picker (Wheel)](#picker-wheel)
+- [Best Practices](#best-practices)
+
+
 ## Switch
 
 Use for binary on/off settings. Has built-in haptics.

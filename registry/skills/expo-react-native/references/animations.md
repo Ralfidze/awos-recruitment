@@ -2,6 +2,19 @@
 
 Use Reanimated v4. Avoid React Native's built-in Animated API.
 
+## Contents
+
+- [Entering and Exiting Animations](#entering-and-exiting-animations)
+- [On-Scroll Animations](#on-scroll-animations)
+- [Common Animation Presets](#common-animation-presets)
+- [Customizing Animations](#customizing-animations)
+- [Shared Value Animations](#shared-value-animations)
+- [Gesture Animations](#gesture-animations)
+- [Keyboard Animations](#keyboard-animations)
+- [Staggered List Animations](#staggered-list-animations)
+- [Best Practices](#best-practices)
+
+
 ## Entering and Exiting Animations
 
 Use Animated.View with entering and exiting animations. Layout animations can animate state changes.

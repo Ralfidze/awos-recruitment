@@ -1,5 +1,15 @@
 # Search
 
+
+## Contents
+
+- [Header Search Bar](#header-search-bar)
+- [useSearch Hook](#usesearch-hook)
+- [Filtering Patterns](#filtering-patterns)
+- [Search with Native Tabs](#search-with-native-tabs)
+- [Empty States](#empty-states)
+- [Search Suggestions](#search-suggestions)
+
 ## Header Search Bar
 
 Add a search bar to the stack header with `headerSearchBarOptions`:

@@ -2,6 +2,19 @@
 
 Use SF Symbols for native feel. Never use FontAwesome or Ionicons.
 
+## Contents
+
+- [Basic Usage](#basic-usage)
+- [Props](#props)
+- [Common Icons](#common-icons)
+- [Animated Symbols](#animated-symbols)
+- [Symbol Weights](#symbol-weights)
+- [Symbol Scales](#symbol-scales)
+- [Multicolor Symbols](#multicolor-symbols)
+- [Finding Symbol Names](#finding-symbol-names)
+- [Best Practices](#best-practices)
+
+
 ## Basic Usage
 
 ```tsx

@@ -1,23 +1,29 @@
----
-name: expo-deployment
-description: Deploying Expo apps to iOS App Store, Android Play Store, web hosting, and API routes
-version: 1.0.0
-license: MIT
----
-
 # Deployment
 
 This skill covers deploying Expo applications across all platforms using EAS (Expo Application Services).
+
+## Contents
+
+- [References](#references)
+- [Quick Start](#quick-start)
+- [Build Commands](#build-commands)
+- [Web Deployment](#web-deployment)
+- [EAS Configuration](#eas-configuration)
+- [Platform-Specific Guides](#platform-specific-guides)
+- [Automated Deployments](#automated-deployments)
+- [Version Management](#version-management)
+- [Monitoring](#monitoring)
+
 
 ## References
 
 Consult these resources as needed:
 
-- ./references/workflows.md -- CI/CD workflows for automated deployments and PR previews
-- ./references/testflight.md -- Submitting iOS builds to TestFlight for beta testing
-- ./references/app-store-metadata.md -- Managing App Store metadata and ASO optimization
-- ./references/play-store.md -- Submitting Android builds to Google Play Store
-- ./references/ios-app-store.md -- iOS App Store submission and review process
+- [eas-workflows.md](eas-workflows.md) -- CI/CD workflows for automated deployments and PR previews
+- [testflight.md](testflight.md) -- Submitting iOS builds to TestFlight for beta testing
+- [app-store-metadata.md](app-store-metadata.md) -- Managing App Store metadata and ASO optimization
+- [play-store.md](play-store.md) -- Submitting Android builds to Google Play Store
+- [ios-app-store.md](ios-app-store.md) -- iOS App Store submission and review process
 
 ## Quick Start
 
@@ -120,20 +126,20 @@ Standard `eas.json` for production deployments:
 
 - Use `npx testflight` for quick TestFlight submissions
 - Configure Apple credentials via `eas credentials`
-- See ./references/testflight.md for credential setup
-- See ./references/ios-app-store.md for App Store submission
+- See [testflight.md](testflight.md) for credential setup
+- See [ios-app-store.md](ios-app-store.md) for App Store submission
 
 ### Android
 
 - Set up Google Play Console service account
 - Configure tracks: internal → closed → open → production
-- See ./references/play-store.md for detailed setup
+- See [play-store.md](play-store.md) for detailed setup
 
 ### Web
 
 - EAS Hosting provides preview URLs for PRs
 - Production deploys to your custom domain
-- See ./references/workflows.md for CI/CD automation
+- See [eas-workflows.md](eas-workflows.md) for CI/CD automation
 
 ## Automated Deployments
 
@@ -162,7 +168,7 @@ jobs:
       profile: production
 ```
 
-See ./references/workflows.md for more workflow examples.
+See [eas-workflows.md](eas-workflows.md) for more workflow examples.
 
 ## Version Management
 

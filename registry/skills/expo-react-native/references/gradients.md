@@ -2,6 +2,15 @@
 
 > **New Architecture Only**: CSS gradients require React Native's New Architecture (Fabric). They are not available in the old architecture or Expo Go.
 
+## Contents
+
+- [Linear Gradients](#linear-gradients)
+- [Radial Gradients](#radial-gradients)
+- [Multiple Gradients](#multiple-gradients)
+- [Common Patterns](#common-patterns)
+- [Important Notes](#important-notes)
+
+
 Use CSS gradients with the `experimental_backgroundImage` style property.
 
 ## Linear Gradients

@@ -1,10 +1,12 @@
----
-name: expo-android-safe-area
-description: Pattern for handling Android safe area insets in Expo apps with tabs. Prevents content from overlapping with system navigation bar.
-version: 1.0.0
----
-
 # Expo Android Safe Area Pattern
+
+
+## Contents
+
+- [Problem](#problem)
+- [Solution](#solution)
+- [Key Points](#key-points)
+- [Common Issues](#common-issues)
 
 ## Problem
 

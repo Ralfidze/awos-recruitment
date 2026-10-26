@@ -1,18 +1,29 @@
----
-name: upgrading-expo
-description: Guidelines for upgrading Expo SDK versions and fixing dependency issues
-version: 1.0.0
-license: MIT
----
+# Upgrading the Expo SDK
+
+## Contents
+
+- [References](#references)
+- [Beta/Preview Releases](#betapreview-releases)
+- [Step-by-Step Upgrade Process](#step-by-step-upgrade-process)
+- [Breaking Changes Checklist](#breaking-changes-checklist)
+- [Prebuild for Native Changes](#prebuild-for-native-changes)
+- [Clear caches for bare workflow](#clear-caches-for-bare-workflow)
+- [Housekeeping](#housekeeping)
+- [Deprecated Packages](#deprecated-packages)
+- [expo.install.exclude](#expoinstallexclude)
+- [Removing patches](#removing-patches)
+- [Postcss](#postcss)
+- [Metro](#metro)
+- [New Architecture](#new-architecture)
 
 ## References
 
-- ./references/new-architecture.md -- SDK +53: New Architecture migration guide
-- ./references/react-19.md -- SDK +54: React 19 changes (useContext → use, Context.Provider → Context, forwardRef removal)
-- ./references/react-compiler.md -- SDK +54: React Compiler setup and migration guide
-- ./references/native-tabs.md -- SDK +55: Native tabs changes (Icon/Label/Badge now accessed via NativeTabs.Trigger.\*)
-- ./references/expo-av-to-audio.md -- Migrate audio playback and recording from expo-av to expo-audio
-- ./references/expo-av-to-video.md -- Migrate video playback from expo-av to expo-video
+- [new-architecture.md](new-architecture.md) -- SDK +53: New Architecture migration guide
+- [react-19.md](react-19.md) -- SDK +54: React 19 changes (useContext → use, Context.Provider → Context, forwardRef removal)
+- [react-compiler.md](react-compiler.md) -- SDK +54: React Compiler setup and migration guide
+- [native-tabs.md](native-tabs.md) -- SDK +55: Native tabs changes (Icon/Label/Badge now accessed via NativeTabs.Trigger.\*)
+- [expo-av-to-audio.md](expo-av-to-audio.md) -- Migrate audio playback and recording from expo-av to expo-audio
+- [expo-av-to-video.md](expo-av-to-video.md) -- Migrate video playback from expo-av to expo-video
 
 ## Beta/Preview Releases
 
