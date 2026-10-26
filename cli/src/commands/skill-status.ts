@@ -73,7 +73,7 @@ export function formatStatusTable(statuses: SkillStatus[]): string {
     summary.push(`${removed} removed from registry`);
   }
   if (outdated > 0 || adopt > 0) {
-    summary.push("run `npx @provectusinc/awos-recruitment skill update`");
+    summary.push("run `npx @provectusinc/awos-recruitment@latest skill update`");
   }
   const footer = summary.length > 0 ? `\n${summary.join("; ")}.\n` : "";
 

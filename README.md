@@ -38,7 +38,7 @@ Once connected, Claude Code gains access to the `search_capabilities` tool — s
 Install discovered capabilities directly into your project:
 
 ```bash
-npx @provectusinc/awos-recruitment <command> <names...>
+npx @provectusinc/awos-recruitment@latest <command> <names...>
 ```
 
 | Command | Description |
@@ -51,9 +51,9 @@ npx @provectusinc/awos-recruitment <command> <names...>
 Examples:
 
 ```bash
-npx @provectusinc/awos-recruitment skill modern-python-development
-npx @provectusinc/awos-recruitment mcp context7 playwright
-npx @provectusinc/awos-recruitment agent testing-expert
+npx @provectusinc/awos-recruitment@latest skill modern-python-development
+npx @provectusinc/awos-recruitment@latest mcp context7 playwright
+npx @provectusinc/awos-recruitment@latest agent testing-expert
 ```
 
 ### Installed skills and updates
@@ -62,26 +62,26 @@ Every installed skill is recorded in `.claude/awos-recruitment.lock.json` with t
 
 ```bash
 # Compare installed skills with the registry
-npx @provectusinc/awos-recruitment skill status
+npx @provectusinc/awos-recruitment@latest skill status
 
 # Update the outdated ones
-npx @provectusinc/awos-recruitment skill update
-npx @provectusinc/awos-recruitment skill update --dry-run     # show the plan only
-npx @provectusinc/awos-recruitment skill update react-best-practices
+npx @provectusinc/awos-recruitment@latest skill update
+npx @provectusinc/awos-recruitment@latest skill update --dry-run     # show the plan only
+npx @provectusinc/awos-recruitment@latest skill update react-best-practices
 
 # Replace one skill with the registry version, whatever its state
-npx @provectusinc/awos-recruitment skill modern-python-development --force
+npx @provectusinc/awos-recruitment@latest skill modern-python-development --force
 
 # Do not offer the current registry version of a skill again
-npx @provectusinc/awos-recruitment skill skip react-best-practices
+npx @provectusinc/awos-recruitment@latest skill skip react-best-practices
 
 # Show what an update would change (your files against the registry)
-npx @provectusinc/awos-recruitment skill diff
+npx @provectusinc/awos-recruitment@latest skill diff
 
 # Merge the registry version with your own edits (Claude does the editing)
-npx @provectusinc/awos-recruitment skill diff --keep react-best-practices
+npx @provectusinc/awos-recruitment@latest skill diff --keep react-best-practices
 #   ... edit .claude/skills/react-best-practices/ ...
-npx @provectusinc/awos-recruitment skill merged react-best-practices
+npx @provectusinc/awos-recruitment@latest skill merged react-best-practices
 ```
 
 `skill diff --keep` saves the registry version and a backup of your copy to the project's cache folder, `~/.cache/awos-recruitment/projects/<folder>-<hash>/` (`$XDG_CACHE_HOME` when set), outside the project, so nothing of it lands in git. After the files in `.claude/skills/<name>/` have both the registry's changes and your edits, `skill merged` records the registry version as the base in the lock file and removes the saved copy. From then on the skill counts as current with your own edits, not as outdated. In Claude Code you only choose "update and keep my edits"; Claude runs these steps.
@@ -103,7 +103,7 @@ Both commands send anonymous counts (project id from the lock file, skill names,
 To be told at session start instead of remembering to run `skill status`, install the `skill-update-check` hook. It checks once a day, is silent offline, and prints one line when something is outdated or removed:
 
 ```bash
-npx @provectusinc/awos-recruitment hook skill-update-check
+npx @provectusinc/awos-recruitment@latest hook skill-update-check
 ```
 
 

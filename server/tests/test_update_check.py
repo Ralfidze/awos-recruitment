@@ -67,7 +67,7 @@ def test_check_skills_classifies_every_case():
     assert result.up_to_date == 1
     assert result.summary == (
         "awos-recruitment: 1 skill outdated (stale); 1 removed from registry (old -> fresh). "
-        "Run `npx @provectusinc/awos-recruitment skill update`."
+        "Run `npx @provectusinc/awos-recruitment@latest skill update`."
     )
 
 

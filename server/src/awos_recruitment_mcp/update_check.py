@@ -17,7 +17,7 @@ from awos_recruitment_mcp.history import HISTORY_FILE
 from awos_recruitment_mcp.registry_index import combined_hash
 from awos_recruitment_mcp.telemetry import track_client_event
 
-UPDATE_COMMAND = "npx @provectusinc/awos-recruitment skill update"
+UPDATE_COMMAND = "npx @provectusinc/awos-recruitment@latest skill update"
 
 
 @dataclass

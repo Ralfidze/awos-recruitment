@@ -150,7 +150,7 @@ function printUpdateCheckTip(cwd: string): void {
     return;
   }
   process.stdout.write(
-    "\nTip: `npx @provectusinc/awos-recruitment hook skill-update-check` tells you at session start when installed skills are outdated.\n",
+    "\nTip: `npx @provectusinc/awos-recruitment@latest hook skill-update-check` tells you at session start when installed skills are outdated.\n",
   );
 }
 

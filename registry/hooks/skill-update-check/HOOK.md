@@ -15,10 +15,10 @@ hooks:
 
 ## What it does
 
-On every session start the hook reads `.claude/awos-recruitment.lock.json` (written by `npx @provectusinc/awos-recruitment skill ...`), sends it to the registry server (`POST /check`) and shows one line when something is outdated or removed:
+On every session start the hook reads `.claude/awos-recruitment.lock.json` (written by `npx @provectusinc/awos-recruitment@latest skill ...`), sends it to the registry server (`POST /check`) and shows one line when something is outdated or removed:
 
 ```text
-awos-recruitment: 2 skills outdated (pytest-best-practices, react-best-practices). Run `npx @provectusinc/awos-recruitment skill update`.
+awos-recruitment: 2 skills outdated (pytest-best-practices, react-best-practices). Run `npx @provectusinc/awos-recruitment@latest skill update`.
 ```
 
 A project that has skills but no lock file yet (installed before the lock file existed) gets one line that names the skills and says to run `skill status`; no network is used for that. When everything is current it prints nothing. It checks at most once a day per project (stamp file under `${XDG_CACHE_HOME:-$HOME/.cache}/awos-recruitment/`), never on every start. It fails open: no lock file, no `curl`, no network, or a server error all end the hook silently with exit 0.
@@ -57,4 +57,4 @@ Skills are copies in the project. When the registry fixes one, nobody tells the 
 }
 ```
 
-`$CLAUDE_PROJECT_DIR` is a literal string that Claude Code expands at runtime. The CLI performs this merge: `npx @provectusinc/awos-recruitment hook skill-update-check`.
+`$CLAUDE_PROJECT_DIR` is a literal string that Claude Code expands at runtime. The CLI performs this merge: `npx @provectusinc/awos-recruitment@latest hook skill-update-check`.

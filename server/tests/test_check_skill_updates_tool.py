@@ -111,7 +111,7 @@ async def test_tool_recognizes_an_old_copy_without_a_lock_file(mock_track, regis
     assert data["skills"][0]["state"] == "outdated"
     assert data["skills"][0]["detail"] == "version from 2026-03-11, 1 version behind"
     assert data["summary"].startswith("awos-recruitment: 1 skill outdated (s)")
-    assert data["command"] == "npx @provectusinc/awos-recruitment skill update"
+    assert data["command"] == "npx @provectusinc/awos-recruitment@latest skill update"
     assert mock_track.call_args_list[0].args[2]["source"] == "mcp"
 
 

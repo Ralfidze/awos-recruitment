@@ -34,7 +34,7 @@ async def check_skill_updates(
 
     Run it as its own command, not chained with other commands. `sha256sum`
     works too; "Is a directory" lines and a non-zero exit are expected. If the
-    returned `summary` is not empty, run `npx @provectusinc/awos-recruitment
+    returned `summary` is not empty, run `npx @provectusinc/awos-recruitment@latest
     skill diff <names>` and tell the user in one line what is outdated and,
     per skill, in two or three short points what the update would change
     (including their own edits that it would remove); then offer to update
