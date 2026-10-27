@@ -49,7 +49,7 @@ just test
 just serve                                  # start the registry server
 # in a second terminal — just serve blocks the foreground
 AWOS_SERVER_URL=http://localhost:8000 \
-  npx @provectusinc/awos-recruitment hook <name>   # install into the current project
+  npx @provectusinc/awos-recruitment@latest hook <name>   # install into the current project
 ```
 
 Re-running the install is idempotent; it never overwrites existing files or settings entries.
