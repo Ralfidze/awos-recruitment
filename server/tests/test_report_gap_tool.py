@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+from fastmcp.exceptions import ToolError
+
 
 def _text(result) -> str:
     return result.content[0].text if result.content else ""
@@ -64,14 +67,21 @@ async def test_report_gap_no_results_minimal(mock_track_gap, mcp_client):
 
 @patch("awos_recruitment_mcp.tools.report_gap.track_gap")
 async def test_report_gap_rejects_unknown_reason(mock_track_gap, mcp_client):
-    """An unknown reason returns an error string and records nothing."""
-    result = await mcp_client.call_tool(
-        "report_gap", {"query": "anything", "reason": "meh"}
-    )
-    assert "invalid reason" in _text(result), (
-        f"Expected an invalid-reason error, got: {_text(result)}"
-    )
+    """An unknown reason fails schema validation and records nothing."""
+    with pytest.raises(ToolError):
+        await mcp_client.call_tool("report_gap", {"query": "anything", "reason": "meh"})
     mock_track_gap.assert_not_called()
+
+
+async def test_report_gap_schema_lists_reasons(mcp_client):
+    """The input schema lists the allowed reason values."""
+    tools = await mcp_client.list_tools()
+    tool = next(t for t in tools if t.name == "report_gap")
+    assert tool.input_schema["properties"]["reason"]["enum"] == [
+        "no_results",
+        "not_relevant",
+        "wrong_type",
+    ]
 
 
 @patch("awos_recruitment_mcp.tools.report_gap.track_gap")

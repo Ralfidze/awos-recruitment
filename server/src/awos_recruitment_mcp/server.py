@@ -100,9 +100,9 @@ mcp = FastMCP(
         "merge on your own: run each command only after the user chooses it. "
         "This server also provides a discovery engine for skills, agents, "
         "tools, and hooks: use search_capabilities to find capabilities "
-        "matching a natural language query. If a search returns nothing "
-        "useful, call report_gap so the maintainers can see which "
-        "capabilities are missing."
+        "matching a natural language query. Call report_gap only when "
+        "you searched for a specific need and decided not to use any of the "
+        "results, so the maintainers can see which capabilities are missing."
     ),
     lifespan=lifespan,
 )

@@ -8,7 +8,7 @@ so that telemetry failures never affect the main request path.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from posthog import Posthog
 
@@ -149,13 +149,14 @@ def track_client_event(
     except Exception:
         logger.warning("Failed to track client event %s", event, exc_info=True)
 
-GAP_REASONS = ("no_results", "not_relevant", "wrong_type")
+
+GapReason = Literal["no_results", "not_relevant", "wrong_type"]
 
 
 def track_gap(
     query: str,
     offered: list[str],
-    reason: str,
+    reason: GapReason,
     needed_for: str | None = None,
     note: str | None = None,
 ) -> None:
@@ -168,7 +169,7 @@ def track_gap(
     Args:
         query: The search text the caller used.
         offered: The capability names the search returned, possibly empty.
-        reason: One of :data:`GAP_REASONS`: ``no_results`` (empty list),
+        reason: One of :data:`GapReason`: ``no_results`` (empty list),
             ``not_relevant`` (results exist but none fits the need),
             ``wrong_type`` (results exist but are not the capability type
             the caller needed, e.g. an MCP server instead of a skill).

@@ -8,7 +8,7 @@ This module registers the ``report_gap`` tool on the shared
 from __future__ import annotations
 
 from awos_recruitment_mcp.server import mcp
-from awos_recruitment_mcp.telemetry import GAP_REASONS, track_gap
+from awos_recruitment_mcp.telemetry import GapReason, track_gap
 
 _MAX_TEXT = 500
 
@@ -16,7 +16,7 @@ _MAX_TEXT = 500
 @mcp.tool
 async def report_gap(
     query: str,
-    reason: str,
+    reason: GapReason,
     offered: list[str] | None = None,
     needed_for: str | None = None,
     note: str | None = None,
@@ -40,15 +40,12 @@ async def report_gap(
         needed_for: The role or agent you were searching for, e.g.
             ``"python-backend"``.
         note: One sentence on why the results did not fit.
+
+    Do not put names of people, companies, clients or repositories in
+    ``needed_for`` or ``note``: both are sent to telemetry as you write them.
     """
     if not query or not query.strip():
         return "Error: query must be a non-empty string."
-
-    if reason not in GAP_REASONS:
-        return (
-            f"Error: invalid reason '{reason}'. "
-            f"Must be one of: {', '.join(GAP_REASONS)}."
-        )
 
     offered = [name for name in (offered or []) if isinstance(name, str) and name]
 
